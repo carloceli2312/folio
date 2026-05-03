@@ -1,0 +1,30 @@
+# flutter_launcher_icons configuration for Folio
+# Run: dart run flutter_launcher_icons
+#
+# Docs: https://pub.dev/packages/flutter_launcher_icons
+
+flutter_launcher_icons:
+  # === Android ===
+  android: true
+  
+  # Default icon (light theme)
+  image_path: "assets/icons/ic_launcher_light.png"
+  
+  # Adaptive icon (Android 8.0+)
+  adaptive_icon_foreground: "assets/icons/ic_foreground_light.png"
+  adaptive_icon_background: "#F5F0E8"
+  
+  # Dark theme adaptive icon (Android 13+)
+  adaptive_icon_foreground_dark: "assets/icons/ic_foreground_dark.png"
+  adaptive_icon_background_dark: "#2C2C2C"
+  
+  # Monochrome icon for themed icons (Android 13+)
+  adaptive_icon_monochrome: "assets/icons/ic_monochrome.png"
+  
+  # === iOS (se serve in futuro) ===
+  ios: false
+  
+  # === Web ===
+  web:
+    generate: true
+    image_path: "assets/icons/ic_launcher_light.png"
