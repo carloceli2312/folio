@@ -5,67 +5,14 @@ import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Una voce nella lista dei documenti recenti.
-///
-/// I path SAF dei documenti aperti via picker non sono stabili tra
-/// sessioni Android, quindi per consentire la riapertura istantanea
-/// teniamo una **copia binaria** del documento in storage app-private
-/// e ne salviamo il path in [cachedPath]. La voce di recenti è auto-
-/// sufficiente: tap → leggi cache → parse → editor.
-class RecentFile {
-  const RecentFile({
-    required this.name,
-    required this.preview,
-    required this.openedAt,
-    this.cachedPath,
-  });
-
-  /// Nome file (es. `documento.odt`).
-  final String name;
-
-  /// Anteprima testuale del documento (max ~120 char).
-  final String preview;
-
-  /// Quando il file è stato aperto/salvato l'ultima volta.
-  final DateTime openedAt;
-
-  /// Path locale (in storage app-private) della copia binaria, se presente.
-  /// `null` per voci legacy create prima dell'introduzione della cache.
-  final String? cachedPath;
-
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'preview': preview,
-        'openedAt': openedAt.toIso8601String(),
-        if (cachedPath != null) 'cachedPath': cachedPath,
-      };
-
-  static RecentFile? fromJson(Map<String, dynamic> json) {
-    final name = json['name'];
-    final openedAt = json['openedAt'];
-    if (name is! String || openedAt is! String) return null;
-    final parsed = DateTime.tryParse(openedAt);
-    if (parsed == null) return null;
-    return RecentFile(
-      name: name,
-      preview: (json['preview'] as String?) ?? '',
-      openedAt: parsed,
-      cachedPath: json['cachedPath'] as String?,
-    );
-  }
-}
+import 'recent_file.dart';
 
 /// Persistenza della lista "documenti recenti" via [SharedPreferences],
 /// con cache binaria opzionale dei documenti in storage app-private.
-///
-/// La lista è ordinata dalla voce più recente alla più vecchia, deduplicata
-/// per nome (riaprire un file già presente lo promuove in cima) e capata
-/// a [maxEntries] elementi. Quando una voce viene espulsa per cap, il suo
-/// file di cache viene cancellato.
 class RecentFilesService {
   RecentFilesService({SharedPreferences? prefs, Directory? cacheDir})
-      : _prefs = prefs,
-        _customCacheDir = cacheDir;
+    : _prefs = prefs,
+      _customCacheDir = cacheDir;
 
   static const String _key = 'recent_files_v1';
 
@@ -83,8 +30,7 @@ class RecentFilesService {
   }
 
   Future<Directory> _cacheDirectory() async {
-    final base =
-        _customCacheDir ?? await getApplicationSupportDirectory();
+    final base = _customCacheDir ?? await getApplicationSupportDirectory();
     final dir = Directory('${base.path}/recents');
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);
@@ -96,8 +42,9 @@ class RecentFilesService {
   /// Usa base64url di UTF-8: deterministico, niente caratteri vietati su
   /// nessun filesystem.
   String _cacheFileNameFor(String displayName) {
-    final encoded =
-        base64UrlEncode(utf8.encode(displayName)).replaceAll('=', '');
+    final encoded = base64UrlEncode(
+      utf8.encode(displayName),
+    ).replaceAll('=', '');
     return '$encoded.odt';
   }
 
@@ -121,34 +68,27 @@ class RecentFilesService {
 
   /// Aggiunge [entry] in cima, rimuovendo eventuali voci precedenti con lo
   /// stesso [RecentFile.name], e cappa la lista a [maxEntries].
-  ///
-  /// Se [bytes] è non-null, scrive una copia binaria in storage app-private
-  /// e la registra nella entry persistita (sovrascrivendo eventuali
-  /// `entry.cachedPath` ricevuti). Se [bytes] è null, la entry mantiene il
-  /// `cachedPath` ricevuto (utile quando la cache esiste già da una
-  /// promozione precedente).
-  ///
-  /// Quando una voce esce dalla lista per superamento del cap, il suo file
-  /// di cache (se presente) viene cancellato.
   Future<List<RecentFile>> addOrPromote(
     RecentFile entry, {
     Uint8List? bytes,
   }) async {
     final current = [...await load()];
 
-    // Riferimento all'eventuale entry precedente con lo stesso nome:
-    // serve per riusare il suo cachedPath se non viene fornita una nuova
-    // copia binaria.
     final previous = current.where((e) => e.name == entry.name).toList();
     current.removeWhere((e) => e.name == entry.name);
 
-    String? cachedPath = entry.cachedPath ??
+    String? cachedPath =
+        entry.cachedPath ??
         (previous.isNotEmpty ? previous.first.cachedPath : null);
+    final String? userPath =
+        entry.userPath ??
+        (previous.isNotEmpty ? previous.first.userPath : null);
 
     if (bytes != null) {
       final cacheDir = await _cacheDirectory();
-      final cacheFile =
-          File('${cacheDir.path}/${_cacheFileNameFor(entry.name)}');
+      final cacheFile = File(
+        '${cacheDir.path}/${_cacheFileNameFor(entry.name)}',
+      );
       await cacheFile.writeAsBytes(bytes, flush: true);
       cachedPath = cacheFile.path;
     }
@@ -158,6 +98,7 @@ class RecentFilesService {
       preview: entry.preview,
       openedAt: entry.openedAt,
       cachedPath: cachedPath,
+      userPath: userPath,
     );
 
     current.insert(0, stored);
@@ -221,19 +162,12 @@ class RecentFilesService {
       try {
         await file.delete();
       } catch (_) {
-        // Non bloccante: se la cancellazione fallisce, il file orfano
-        // resta in app-private storage e verrà sovrascritto al prossimo
-        // uso dello stesso slot (stesso filename).
       }
     }
   }
 
   /// Estrae un'anteprima testuale dai primi [previewMaxLength] caratteri di
   /// un Delta serializzato come JSON (lista di operazioni `{insert: ...}`).
-  ///
-  /// Le insert non testuali (embed immagini, ecc.) vengono ignorate.
-  /// Whitespace consecutivi (incluse le newline) sono compressi in un singolo
-  /// spazio per ottenere un'anteprima compatta su una riga.
   static String previewFromDeltaOps(List<dynamic> ops) {
     final buffer = StringBuffer();
     for (final op in ops) {
@@ -244,8 +178,7 @@ class RecentFilesService {
         if (buffer.length >= previewMaxLength * 2) break;
       }
     }
-    final text =
-        buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    final text = buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
     if (text.length <= previewMaxLength) return text;
     return '${text.substring(0, previewMaxLength).trimRight()}…';
   }

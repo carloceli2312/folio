@@ -1,7 +1,6 @@
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/odf_parser.dart';
-import 'package:folio/odf_serializer.dart';
+import 'package:folio/folio.dart';
 
 import 'odt_fixtures.dart';
 
@@ -19,9 +18,9 @@ String _allText(Delta delta) {
 /// Restituisce le operations che inseriscono `\n` con uno specifico set di
 /// attributi (utile per controllare list / heading attributes).
 Iterable<Operation> _newlineOpsWith(Delta delta, String attribute) {
-  return delta
-      .toList()
-      .where((op) => op.data == '\n' && (op.attributes?[attribute] != null));
+  return delta.toList().where(
+    (op) => op.data == '\n' && (op.attributes?[attribute] != null),
+  );
 }
 
 void main() {
@@ -118,8 +117,10 @@ void main() {
       final reSerialized = OdfSerializer.serialize(originalDelta);
       final reparsed = OdfParser.parse(reSerialized);
 
-      final values =
-          _newlineOpsWith(reparsed, 'list').map((op) => op.attributes!['list']).toSet();
+      final values = _newlineOpsWith(
+        reparsed,
+        'list',
+      ).map((op) => op.attributes!['list']).toSet();
       expect(values, containsAll(<String>['bullet', 'ordered']));
     });
   });

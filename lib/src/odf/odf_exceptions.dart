@@ -1,7 +1,4 @@
 /// Typed exceptions raised by [OdfParser] / [OdfSerializer].
-///
-/// L'UI cattura queste eccezioni e mostra il [userMessage] all'utente,
-/// preservando [cause] per logging/crash reporting.
 sealed class OdfException implements Exception {
   const OdfException(this.userMessage, [this.cause]);
 
@@ -19,26 +16,23 @@ sealed class OdfException implements Exception {
 /// Il file non è un archivio ZIP valido (o è troncato/corrotto).
 class OdfInvalidArchiveException extends OdfException {
   const OdfInvalidArchiveException([Object? cause])
-      : super(
-          'Il file non sembra essere un documento .odt valido.',
-          cause,
-        );
+    : super('Il file non sembra essere un documento .odt valido.', cause);
 }
 
 /// L'archivio ZIP non contiene `content.xml`.
 class OdfMissingContentException extends OdfException {
   const OdfMissingContentException()
-      : super('Il documento è incompleto: manca content.xml.');
+    : super('Il documento è incompleto: manca content.xml.');
 }
 
 /// `content.xml` esiste ma non è XML ben formato o non rispetta lo schema ODF.
 class OdfMalformedXmlException extends OdfException {
   const OdfMalformedXmlException([Object? cause])
-      : super('Il contenuto del documento è danneggiato.', cause);
+    : super('Il contenuto del documento è danneggiato.', cause);
 }
 
 /// Errore generico non classificabile durante parsing/serializzazione.
 class OdfUnknownException extends OdfException {
   const OdfUnknownException([Object? cause])
-      : super('Errore imprevisto durante l\'elaborazione del documento.', cause);
+    : super('Errore imprevisto durante l\'elaborazione del documento.', cause);
 }

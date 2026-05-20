@@ -53,3 +53,9 @@ key.properties
 # Environment variables
 .env
 .env.*
+
+# Dart DevTools (IDE-generated, per-machine)
+devtools_options.yaml
+
+# Claude or other AI assistant settings (per-machine)
+.claude/

@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -9,51 +10,20 @@ import 'odf_exceptions.dart';
 
 /// Parses ODF (.odt) files and converts their content to a flutter_quill
 /// [Delta] document.
-///
-/// ODF files are ZIP archives. The document text lives in [content.xml],
-/// which uses a set of well-known namespaces to describe paragraphs, inline
-/// spans and their formatting.
-///
-/// ## Funzionalità supportate
-/// - Testo semplice, paragrafi, heading H1–H6
-/// - Formattazione: grassetto, corsivo, sottolineato, barrato, colore, dimensione
-/// - Liste puntate e ordinate
-/// - Hyperlink (testo + URL)
-/// - Immagini incorporate nel documento (via base64 data URI)
-/// - Tabelle (celle rese come testo separato da " | ", righe separate da "\n")
 class OdfParser {
-  // ODF namespace URIs used in content.xml
-  static const _officeNs =
-      'urn:oasis:names:tc:opendocument:xmlns:office:1.0';
+  static const _officeNs = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0';
   static const _textNs = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
   static const _styleNs = 'urn:oasis:names:tc:opendocument:xmlns:style:1.0';
   static const _foNs =
       'urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0';
-  static const _drawNs =
-      'urn:oasis:names:tc:opendocument:xmlns:drawing:1.0';
+  static const _drawNs = 'urn:oasis:names:tc:opendocument:xmlns:drawing:1.0';
   static const _xlinkNs = 'http://www.w3.org/1999/xlink';
-  static const _tableNs =
-      'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
-
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
+  static const _tableNs = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
 
   /// Opens an ODF file from its raw [bytes], extracts [content.xml] and
   /// returns the document as a flutter_quill [Delta].
-  ///
-  /// A differenza di [parseContentXml], questo metodo passa l'intero archivio
-  /// al parser in modo da poter estrarre le immagini incorporate.
-  ///
-  /// Throws una sottoclasse di [OdfException] in caso di errore:
-  /// - [OdfInvalidArchiveException] se i byte non sono uno ZIP valido
-  /// - [OdfMissingContentException] se `content.xml` è assente
-  /// - [OdfMalformedXmlException] se l'XML non è ben formato
-  /// - [OdfUnknownException] per qualsiasi altro errore inatteso
   static Delta parse(Uint8List bytes) {
-    // Un file ODT minimo (ZIP con almeno mimetype + content.xml) è ben oltre
-    // i 22 byte del solo End-of-Central-Directory record. Sotto questa soglia
-    // non c'è nemmeno un archivio ZIP valido.
+
     if (bytes.length < 22) {
       throw const OdfInvalidArchiveException();
     }
@@ -91,14 +61,6 @@ class OdfParser {
   }
 
   /// Parses an ODF [content.xml] string and returns a [Delta].
-  ///
-  /// This method is exposed so that unit-tests can exercise the parsing logic
-  /// without needing a real ZIP archive.
-  ///
-  /// Le immagini non possono essere estratte senza l'archivio completo:
-  /// al loro posto verrà inserito un placeholder testuale `[immagine]`.
-  ///
-  /// Throws [OdfMalformedXmlException] se [xmlContent] non è XML valido.
   static Delta parseContentXml(String xmlContent) {
     try {
       return _parseWithArchive(xmlContent, null);
@@ -107,19 +69,11 @@ class OdfParser {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Core parsing
-  // ---------------------------------------------------------------------------
-
   static Delta _parseWithArchive(String xmlContent, Archive? archive) {
     final doc = XmlDocument.parse(xmlContent);
     final styles = _parseStyles(doc);
     return _buildDelta(doc, styles, archive);
   }
-
-  // ---------------------------------------------------------------------------
-  // Style parsing
-  // ---------------------------------------------------------------------------
 
   /// Builds a map of style-name → Quill text-attribute map from the
   /// [<office:automatic-styles>] section of [doc].
@@ -161,7 +115,6 @@ class OdfParser {
         final color = textProps.getAttribute('color', namespace: _foNs);
         if (color != null) attrs['color'] = color;
 
-        // Dimensione font: ODF usa "12pt", Quill vuole la stessa stringa
         final fontSize = textProps.getAttribute('font-size', namespace: _foNs);
         if (fontSize != null) attrs['size'] = fontSize;
       }
@@ -172,10 +125,6 @@ class OdfParser {
     return result;
   }
 
-  // ---------------------------------------------------------------------------
-  // Delta building
-  // ---------------------------------------------------------------------------
-
   static Delta _buildDelta(
     XmlDocument doc,
     Map<String, Map<String, dynamic>> styles,
@@ -183,12 +132,14 @@ class OdfParser {
   ) {
     final delta = Delta();
 
-    final bodyEl =
-        doc.findAllElements('body', namespace: _officeNs).firstOrNull;
+    final bodyEl = doc
+        .findAllElements('body', namespace: _officeNs)
+        .firstOrNull;
     if (bodyEl == null) return delta..insert('\n');
 
-    final textEl =
-        bodyEl.findElements('text', namespace: _officeNs).firstOrNull;
+    final textEl = bodyEl
+        .findElements('text', namespace: _officeNs)
+        .firstOrNull;
     if (textEl == null) return delta..insert('\n');
 
     final listStyles = _parseListStyles(doc);
@@ -236,8 +187,7 @@ class OdfParser {
 
     final paraAttrs = <String, dynamic>{};
     if (isHeading) {
-      final level =
-          element.getAttribute('outline-level', namespace: _textNs);
+      final level = element.getAttribute('outline-level', namespace: _textNs);
       paraAttrs['header'] = int.tryParse(level ?? '') ?? 1;
     }
 
@@ -262,9 +212,7 @@ class OdfParser {
       } else if (node is XmlElement) {
         switch (node.namespaceUri) {
           case _textNs:
-            _handleTextElement(
-              node, styles, inheritedAttrs, delta, archive,
-            );
+            _handleTextElement(node, styles, inheritedAttrs, delta, archive);
           case _drawNs:
             if (node.localName == 'frame') {
               _parseDrawFrame(node, delta, archive);
@@ -284,15 +232,16 @@ class OdfParser {
   ) {
     switch (node.localName) {
       case 'span':
-        final spanStyleName =
-            node.getAttribute('style-name', namespace: _textNs);
+        final spanStyleName = node.getAttribute(
+          'style-name',
+          namespace: _textNs,
+        );
         final spanAttrs = <String, dynamic>{...inheritedAttrs};
         if (spanStyleName != null) {
           spanAttrs.addAll(styles[spanStyleName] ?? {});
         }
         _parseInlineContent(node, styles, spanAttrs, delta, archive);
       case 'a':
-        // Hyperlink: estrae URL e lo passa come attributo Quill 'link'
         final url = node.getAttribute('href', namespace: _xlinkNs);
         final linkAttrs = <String, dynamic>{...inheritedAttrs};
         if (url != null && url.isNotEmpty) {
@@ -302,11 +251,8 @@ class OdfParser {
       case 'line-break':
         delta.insert('\n', inheritedAttrs.isEmpty ? null : inheritedAttrs);
       case 's':
-        // ODF compresses multiple consecutive spaces into <text:s text:c="N"/>.
         final count =
-            int.tryParse(
-              node.getAttribute('c', namespace: _textNs) ?? '1',
-            ) ??
+            int.tryParse(node.getAttribute('c', namespace: _textNs) ?? '1') ??
             1;
         delta.insert(
           ' ' * count,
@@ -317,18 +263,7 @@ class OdfParser {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Immagini
-  // ---------------------------------------------------------------------------
-
   /// Parsa un elemento `<draw:frame>` che può contenere un'immagine.
-  ///
-  /// Le immagini ODF sono memorizzate nella cartella `Pictures/` dello ZIP.
-  /// Vengono estratte e codificate come data URI base64, poi inserite nel
-  /// Delta come embed Quill di tipo `image`.
-  ///
-  /// Se l'archivio non è disponibile (parsing da solo content.xml) o
-  /// l'immagine non viene trovata, viene inserito un placeholder testuale.
   static void _parseDrawFrame(
     XmlElement frameEl,
     Delta delta,
@@ -361,9 +296,8 @@ class OdfParser {
     final mimeType = _guessMimeType(href);
     final dataUri = 'data:$mimeType;base64,$base64Data';
 
-    // Quill embed per immagine: {'image': dataUri}
     delta.insert({'image': dataUri});
-    delta.insert('\n'); // richiesto da Quill dopo un embed blocco
+    delta.insert('\n');
   }
 
   /// Inferisce il MIME type dell'immagine dall'estensione del file.
@@ -379,28 +313,23 @@ class OdfParser {
     };
   }
 
-  // ---------------------------------------------------------------------------
-  // Tabelle
-  // ---------------------------------------------------------------------------
-
   /// Parsa un elemento `<table:table>` e lo converte in testo strutturato.
-  ///
-  /// Ogni riga diventa una riga di testo con le celle separate da " | ".
-  /// Una riga di separatori "-" viene inserita dopo l'intestazione (prima riga).
   static void _parseTable(
     XmlElement tableEl,
     Map<String, Map<String, dynamic>> styles,
     Delta delta,
     Archive? archive,
   ) {
-    final rows =
-        tableEl.findElements('table-row', namespace: _tableNs).toList();
+    final rows = tableEl
+        .findElements('table-row', namespace: _tableNs)
+        .toList();
     if (rows.isEmpty) return;
 
     var isFirstRow = true;
     for (final row in rows) {
-      final cells =
-          row.findElements('table-cell', namespace: _tableNs).toList();
+      final cells = row
+          .findElements('table-cell', namespace: _tableNs)
+          .toList();
       final cellTexts = <String>[];
 
       for (final cell in cells) {
@@ -424,9 +353,10 @@ class OdfParser {
       delta.insert(cellTexts.join(' | '));
       delta.insert('\n');
 
-      // Separatore dopo intestazione
       if (isFirstRow) {
-        final separator = cellTexts.map((c) => '-' * c.length.clamp(3, 20)).join('-+-');
+        final separator = cellTexts
+            .map((c) => '-' * c.length.clamp(3, 20))
+            .join('-+-');
         delta.insert(separator);
         delta.insert('\n');
         isFirstRow = false;
@@ -434,21 +364,15 @@ class OdfParser {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Liste
-  // ---------------------------------------------------------------------------
-
   /// Builds a map of list-style-name → `'ordered'` or `'bullet'` by inspecting
   /// [<text:list-style>] elements in the document's automatic-styles section.
-  ///
-  /// A list style is considered ordered when it contains at least one
-  /// [<text:list-level-style-number>] child; otherwise it is treated as a
-  /// bullet list.
   static Map<String, String> _parseListStyles(XmlDocument doc) {
     final result = <String, String>{};
 
-    for (final listStyle
-        in doc.findAllElements('list-style', namespace: _textNs)) {
+    for (final listStyle in doc.findAllElements(
+      'list-style',
+      namespace: _textNs,
+    )) {
       final name = listStyle.getAttribute('name', namespace: _styleNs);
       if (name == null) continue;
 
@@ -462,10 +386,6 @@ class OdfParser {
   }
 
   /// Converts a [<text:list>] element into Delta list operations.
-  ///
-  /// The list type (`'ordered'` or `'bullet'`) is resolved by looking up the
-  /// list's [text:style-name] in [listStyles]. Defaults to `'bullet'` when the
-  /// style is absent or unknown.
   static void _parseList(
     XmlElement listEl,
     Map<String, Map<String, dynamic>> styles,
@@ -473,13 +393,11 @@ class OdfParser {
     Delta delta,
     Archive? archive,
   ) {
-    final styleName =
-        listEl.getAttribute('style-name', namespace: _textNs);
+    final styleName = listEl.getAttribute('style-name', namespace: _textNs);
     final listType =
         (styleName != null ? listStyles[styleName] : null) ?? 'bullet';
 
-    for (final item
-        in listEl.findElements('list-item', namespace: _textNs)) {
+    for (final item in listEl.findElements('list-item', namespace: _textNs)) {
       for (final child in item.childElements) {
         if (child.namespaceUri == _textNs &&
             (child.localName == 'p' || child.localName == 'h')) {

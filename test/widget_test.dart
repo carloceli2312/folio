@@ -6,17 +6,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:folio/folio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:folio/home_screen.dart';
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('home screen shows branding and open-document button',
-      (WidgetTester tester) async {
+  testWidgets('home screen shows branding and open-document button', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         localizationsDelegates: [FlutterQuillLocalizations.delegate],

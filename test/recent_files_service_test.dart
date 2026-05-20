@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/recent_files_service.dart';
+import 'package:folio/folio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -98,19 +98,21 @@ void main() {
       expect(await service.load(), isEmpty);
     });
 
-    test('voci JSON con campi mancanti vengono scartate, le altre preservate',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        'recent_files_v1':
-            '[{"name":"ok.odt","preview":"p","openedAt":"2026-04-30T10:00:00.000Z"},'
-            '{"name":42},'
-            '{"openedAt":"2026-04-30T10:00:00.000Z"}]',
-      });
-      final service = RecentFilesService();
-      final list = await service.load();
-      expect(list, hasLength(1));
-      expect(list.single.name, 'ok.odt');
-    });
+    test(
+      'voci JSON con campi mancanti vengono scartate, le altre preservate',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'recent_files_v1':
+              '[{"name":"ok.odt","preview":"p","openedAt":"2026-04-30T10:00:00.000Z"},'
+              '{"name":42},'
+              '{"openedAt":"2026-04-30T10:00:00.000Z"}]',
+        });
+        final service = RecentFilesService();
+        final list = await service.load();
+        expect(list, hasLength(1));
+        expect(list.single.name, 'ok.odt');
+      },
+    );
   });
 
   group('RecentFilesService.previewFromDeltaOps', () {
@@ -118,24 +120,18 @@ void main() {
       final ops = [
         {'insert': 'Ciao mondo'},
         {
-          'insert': {'image': 'data:...'}
+          'insert': {'image': 'data:...'},
         },
         {'insert': '!'},
       ];
-      expect(
-        RecentFilesService.previewFromDeltaOps(ops),
-        'Ciao mondo!',
-      );
+      expect(RecentFilesService.previewFromDeltaOps(ops), 'Ciao mondo!');
     });
 
     test('comprime whitespace e newline in singoli spazi', () {
       final ops = [
         {'insert': 'Riga 1\n\n\nRiga   2'},
       ];
-      expect(
-        RecentFilesService.previewFromDeltaOps(ops),
-        'Riga 1 Riga 2',
-      );
+      expect(RecentFilesService.previewFromDeltaOps(ops), 'Riga 1 Riga 2');
     });
 
     test('tronca con ellissi se più lungo del limite', () {
@@ -170,19 +166,22 @@ void main() {
 
     Uint8List bytes(String s) => Uint8List.fromList(s.codeUnits);
 
-    test('addOrPromote con bytes scrive la cache e popola cachedPath', () async {
-      final result = await service.addOrPromote(
-        RecentFile(
-          name: 'doc.odt',
-          preview: 'p',
-          openedAt: DateTime.utc(2026, 4, 30),
-        ),
-        bytes: bytes('hello'),
-      );
-      expect(result, hasLength(1));
-      expect(result.first.cachedPath, isNotNull);
-      expect(File(result.first.cachedPath!).existsSync(), isTrue);
-    });
+    test(
+      'addOrPromote con bytes scrive la cache e popola cachedPath',
+      () async {
+        final result = await service.addOrPromote(
+          RecentFile(
+            name: 'doc.odt',
+            preview: 'p',
+            openedAt: DateTime.utc(2026, 4, 30),
+          ),
+          bytes: bytes('hello'),
+        );
+        expect(result, hasLength(1));
+        expect(result.first.cachedPath, isNotNull);
+        expect(File(result.first.cachedPath!).existsSync(), isTrue);
+      },
+    );
 
     test('readCached restituisce i bytes salvati', () async {
       final result = await service.addOrPromote(
@@ -239,8 +238,7 @@ void main() {
       expect(String.fromCharCodes(read!), 'new-content');
     });
 
-    test('promozione senza bytes preserva il cachedPath precedente',
-        () async {
+    test('promozione senza bytes preserva il cachedPath precedente', () async {
       final first = await service.addOrPromote(
         RecentFile(
           name: 'doc.odt',
@@ -264,8 +262,7 @@ void main() {
       expect(String.fromCharCodes(read!), 'content');
     });
 
-    test('eviction per superamento del cap cancella i file di cache',
-        () async {
+    test('eviction per superamento del cap cancella i file di cache', () async {
       // Riempio oltre il cap.
       final paths = <String>[];
       for (var i = 0; i < RecentFilesService.maxEntries + 3; i++) {
@@ -282,8 +279,11 @@ void main() {
       // I primi 3 path devono essere stati cancellati (sono usciti dalla
       // top-N).
       for (var i = 0; i < 3; i++) {
-        expect(File(paths[i]).existsSync(), isFalse,
-            reason: 'cache di file_$i.odt non cancellata');
+        expect(
+          File(paths[i]).existsSync(),
+          isFalse,
+          reason: 'cache di file_$i.odt non cancellata',
+        );
       }
       // Gli ultimi maxEntries devono ancora esistere.
       for (var i = 3; i < paths.length; i++) {
@@ -333,6 +333,61 @@ void main() {
       expect(await service.load(), isEmpty);
       expect(File(pa).existsSync(), isFalse);
       expect(File(pb).existsSync(), isFalse);
+    });
+  });
+
+  group('RecentFilesService — userPath', () {
+    test('userPath sopravvive a save → load (round-trip JSON)', () async {
+      final service = RecentFilesService();
+      await service.addOrPromote(
+        RecentFile(
+          name: 'doc.odt',
+          preview: 'p',
+          openedAt: DateTime.utc(2026, 4, 30),
+          userPath: '/storage/emulated/0/Folio/doc.odt',
+        ),
+      );
+      final loaded = await service.load();
+      expect(loaded.single.userPath, '/storage/emulated/0/Folio/doc.odt');
+    });
+
+    test(
+      'entry legacy senza userPath → load la accetta con userPath null',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'recent_files_v1':
+              '[{"name":"legacy.odt","preview":"p",'
+              '"openedAt":"2026-04-30T10:00:00.000Z",'
+              '"cachedPath":"/cache/abc.odt"}]',
+        });
+        final service = RecentFilesService();
+        final list = await service.load();
+        expect(list, hasLength(1));
+        expect(list.single.userPath, isNull);
+        expect(list.single.cachedPath, '/cache/abc.odt');
+      },
+    );
+
+    test('promozione senza userPath preserva quello precedente', () async {
+      final service = RecentFilesService();
+      await service.addOrPromote(
+        RecentFile(
+          name: 'doc.odt',
+          preview: 'p',
+          openedAt: DateTime.utc(2026, 4, 1),
+          userPath: '/storage/emulated/0/Folio/doc.odt',
+        ),
+      );
+      // Seconda promozione senza userPath: lo deve EREDITARE dalla
+      // precedente (stesso pattern di cachedPath).
+      final result = await service.addOrPromote(
+        RecentFile(
+          name: 'doc.odt',
+          preview: 'p',
+          openedAt: DateTime.utc(2026, 4, 30),
+        ),
+      );
+      expect(result.single.userPath, '/storage/emulated/0/Folio/doc.odt');
     });
   });
 }

@@ -1,0 +1,17 @@
+# Template per android/key.properties — COPIA questo file in `key.properties`
+# e compila i valori. `key.properties` e i keystore (*.jks) sono GITIGNORATI:
+# non verranno mai committati. NON condividere mai il keystore o le password.
+#
+# 1. Genera il keystore (nel TUO terminale, non qui — vedi istruzioni):
+#      keytool -genkey -v -keystore ~/folio-upload-keystore.jks \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+# 2. Copia: cp android/key.properties.example android/key.properties
+# 3. Compila i 4 valori sotto con le password scelte e il path del keystore.
+#
+# Il path consigliato è ASSOLUTO e FUORI dal repo (es. home directory),
+# così il keystore non rischia mai di finire in git.
+
+storePassword=LA_TUA_STORE_PASSWORD
+keyPassword=LA_TUA_KEY_PASSWORD
+keyAlias=upload
+storeFile=/home/carlo/folio-upload-keystore.jks

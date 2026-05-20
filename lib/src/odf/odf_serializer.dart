@@ -3,37 +3,19 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:folio/src/odf/style_collector.dart';
 
 /// Serializza un [Delta] di flutter_quill in un file ODF (.odt) valido.
-///
-/// Il file prodotto è un archivio ZIP contenente:
-/// - `mimetype` (non compresso, primo file)
-/// - `META-INF/manifest.xml`
-/// - `content.xml` con il contenuto del documento
-/// - `styles.xml` minimale
-///
-/// Uso principale:
-/// ```dart
-/// final bytes = OdfSerializer.serialize(controller.document.toDelta());
-/// ```
 class OdfSerializer {
-  // Namespace ODF usati in content.xml
-  static const _nsOffice =
-      'urn:oasis:names:tc:opendocument:xmlns:office:1.0';
+  static const _nsOffice = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0';
   static const _nsText = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
   static const _nsStyle = 'urn:oasis:names:tc:opendocument:xmlns:style:1.0';
   static const _nsFo =
       'urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0';
 
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
-
   /// Converte un [Delta] flutter_quill in bytes di un file .odt valido.
-  ///
-  /// Il documento prodotto è compatibile con LibreOffice e altri lettori ODF.
   static Uint8List serialize(Delta delta) {
-    final styleCollector = _StyleCollector();
+    final styleCollector = StyleCollector();
     final paragraphsXml = _buildParagraphsXml(delta, styleCollector);
     final autoStylesXml = styleCollector.buildAutoStylesXml();
 
@@ -41,35 +23,31 @@ class OdfSerializer {
     return _buildZip(contentXml);
   }
 
-  // ---------------------------------------------------------------------------
-  // Costruzione content.xml
-  // ---------------------------------------------------------------------------
-
-  static String _buildContentXml(
-    String autoStylesXml,
-    String paragraphsXml,
-  ) {
+  static String _buildContentXml(String autoStylesXml, String paragraphsXml) {
     return '''<?xml version="1.0" encoding="UTF-8"?>
-<office:document-content
-  xmlns:office="$_nsOffice"
-  xmlns:text="$_nsText"
-  xmlns:style="$_nsStyle"
-  xmlns:fo="$_nsFo"
-  office:version="1.3">
-  <office:automatic-styles>
-$autoStylesXml$_listStylesXml  </office:automatic-styles>
-  <office:body>
-    <office:text>
-$paragraphsXml    </office:text>
-  </office:body>
-</office:document-content>''';
+              <office:document-content
+                xmlns:office="$_nsOffice"
+                xmlns:text="$_nsText"
+                xmlns:style="$_nsStyle"
+                xmlns:fo="$_nsFo"
+                office:version="1.3">
+                <office:automatic-styles>
+                  $autoStylesXml$_listStylesXml
+                </office:automatic-styles>
+                <office:body>
+                  <office:text>
+                    $paragraphsXml
+                  </office:text>
+                </office:body>
+              </office:document-content>''';
   }
 
   /// Dichiarazioni delle liste (`L_bullet`, `L_ordered`) replicate in
   /// `content.xml`. Necessarie per il round-trip: il parser legge solo
   /// `content.xml`, quindi senza queste dichiarazioni un'eventuale lista
   /// ordinata risulterebbe demoted a bullet alla riapertura.
-  static const String _listStylesXml = '''    <text:list-style style:name="L_bullet">
+  static const String _listStylesXml =
+      '''    <text:list-style style:name="L_bullet">
       <text:list-level-style-bullet text:level="1" text:bullet-char="&#x2022;"/>
     </text:list-style>
     <text:list-style style:name="L_ordered">
@@ -77,23 +55,11 @@ $paragraphsXml    </office:text>
     </text:list-style>
 ''';
 
-  // ---------------------------------------------------------------------------
-  // Conversione Delta → XML paragrafi
-  // ---------------------------------------------------------------------------
-
   /// Itera le operazioni del [Delta] e produce le righe XML dei paragrafi.
-  ///
-  /// In Quill ogni "blocco" termina con un `\n`. Gli attributi sul `\n`
-  /// determinano il tipo di blocco (heading, list…); il testo che precede
-  /// l'ultimo `\n` del blocco compone il contenuto.
-  static String _buildParagraphsXml(
-    Delta delta,
-    _StyleCollector collector,
-  ) {
+  static String _buildParagraphsXml(Delta delta, StyleCollector collector) {
     final ops = delta.toList();
     final buffer = StringBuffer();
 
-    // Raggruppa le operazioni in blocchi separati da \n
     final blocks = _splitIntoBlocks(ops);
 
     for (final block in blocks) {
@@ -104,9 +70,6 @@ $paragraphsXml    </office:text>
   }
 
   /// Divide la lista piatta di [Operation] in blocchi logici.
-  ///
-  /// Ogni blocco è una lista di operazioni che termina con un inserimento `\n`
-  /// (che può avere attributi di paragrafo: `header`, `list`…).
   static List<List<Operation>> _splitIntoBlocks(List<Operation> ops) {
     final blocks = <List<Operation>>[];
     var current = <Operation>[];
@@ -115,17 +78,14 @@ $paragraphsXml    </office:text>
       if (op.data is! String) continue;
       final text = op.data as String;
 
-      // Spezza la stringa nei caratteri \n
       var start = 0;
       for (var i = 0; i < text.length; i++) {
         if (text[i] == '\n') {
-          // Testo prima di questo \n
           if (i > start) {
             current.add(
               Operation.insert(text.substring(start, i), op.attributes),
             );
           }
-          // Il \n stesso termina il blocco
           current.add(Operation.insert('\n', op.attributes));
           blocks.add(List.unmodifiable(current));
           current = [];
@@ -133,15 +93,11 @@ $paragraphsXml    </office:text>
         }
       }
 
-      // Testo residuo dopo l'ultimo \n (senza \n finale)
       if (start < text.length) {
-        current.add(
-          Operation.insert(text.substring(start), op.attributes),
-        );
+        current.add(Operation.insert(text.substring(start), op.attributes));
       }
     }
 
-    // Blocco finale senza \n (non dovrebbe esistere in un Delta valido)
     if (current.isNotEmpty) {
       blocks.add(List.unmodifiable(current));
     }
@@ -152,21 +108,18 @@ $paragraphsXml    </office:text>
   /// Scrive un singolo blocco come elemento XML (paragrafo, heading, lista…).
   static void _writeBlock(
     List<Operation> block,
-    _StyleCollector collector,
+    StyleCollector collector,
     StringBuffer out,
   ) {
     if (block.isEmpty) return;
 
-    // Trova l'operazione \n finale per leggere gli attributi di paragrafo
     final newlineOp = block.lastWhere(
       (op) => op.data == '\n',
       orElse: () => Operation.insert('\n'),
     );
     final paraAttrs = newlineOp.attributes ?? {};
 
-    // Operazioni di contenuto (tutto tranne il \n finale)
-    final contentOps =
-        block.where((op) => op.data != '\n').toList();
+    final contentOps = block.where((op) => op.data != '\n').toList();
 
     final listType = paraAttrs['list'] as String?;
     final headerLevel = paraAttrs['header'];
@@ -182,7 +135,7 @@ $paragraphsXml    </office:text>
 
   static void _writeParagraph(
     List<Operation> ops,
-    _StyleCollector collector,
+    StyleCollector collector,
     StringBuffer out,
   ) {
     out.write('      <text:p text:style-name="Standard">');
@@ -193,7 +146,7 @@ $paragraphsXml    </office:text>
   static void _writeHeading(
     List<Operation> ops,
     int level,
-    _StyleCollector collector,
+    StyleCollector collector,
     StringBuffer out,
   ) {
     final safeLevel = level.clamp(1, 6);
@@ -208,7 +161,7 @@ $paragraphsXml    </office:text>
   static void _writeListItem(
     List<Operation> ops,
     String listType,
-    _StyleCollector collector,
+    StyleCollector collector,
     StringBuffer out,
   ) {
     final styleName = listType == 'ordered' ? 'L_ordered' : 'L_bullet';
@@ -219,13 +172,9 @@ $paragraphsXml    </office:text>
     out.writeln('      </text:list>');
   }
 
-  // ---------------------------------------------------------------------------
-  // Operazioni inline (testo + formattazione)
-  // ---------------------------------------------------------------------------
-
   static void _writeInlineOps(
     List<Operation> ops,
-    _StyleCollector collector,
+    StyleCollector collector,
     StringBuffer out,
   ) {
     for (final op in ops) {
@@ -245,14 +194,9 @@ $paragraphsXml    </office:text>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // ZIP assembly
-  // ---------------------------------------------------------------------------
-
   static Uint8List _buildZip(String contentXml) {
     final archive = Archive();
 
-    // 1. mimetype — DEVE essere il primo file e non compresso (ODF spec)
     final mimetypeBytes = utf8.encode(
       'application/vnd.oasis.opendocument.text',
     );
@@ -260,25 +204,20 @@ $paragraphsXml    </office:text>
       ArchiveFile.noCompress('mimetype', mimetypeBytes.length, mimetypeBytes),
     );
 
-    // 2. META-INF/manifest.xml
     final manifestXml = _buildManifestXml();
     final manifestBytes = utf8.encode(manifestXml);
     archive.addFile(
       ArchiveFile('META-INF/manifest.xml', manifestBytes.length, manifestBytes),
     );
 
-    // 3. content.xml
     final contentBytes = utf8.encode(contentXml);
     archive.addFile(
       ArchiveFile('content.xml', contentBytes.length, contentBytes),
     );
 
-    // 4. styles.xml minimale
     final stylesXml = _buildStylesXml();
     final stylesBytes = utf8.encode(stylesXml);
-    archive.addFile(
-      ArchiveFile('styles.xml', stylesBytes.length, stylesBytes),
-    );
+    archive.addFile(ArchiveFile('styles.xml', stylesBytes.length, stylesBytes));
 
     return Uint8List.fromList(ZipEncoder().encode(archive));
   }
@@ -299,7 +238,8 @@ $paragraphsXml    </office:text>
     manifest:media-type="text/xml"/>
 </manifest:manifest>''';
 
-  static String _buildStylesXml() => '''<?xml version="1.0" encoding="UTF-8"?>
+  static String _buildStylesXml() =>
+      '''<?xml version="1.0" encoding="UTF-8"?>
 <office:document-styles
   xmlns:office="$_nsOffice"
   xmlns:style="$_nsStyle"
@@ -354,10 +294,6 @@ $paragraphsXml    </office:text>
   </office:automatic-styles>
 </office:document-styles>''';
 
-  // ---------------------------------------------------------------------------
-  // Utility
-  // ---------------------------------------------------------------------------
-
   /// Esegue l'escape dei caratteri speciali XML.
   static String _escapeXml(String text) => text
       .replaceAll('&', '&amp;')
@@ -365,70 +301,4 @@ $paragraphsXml    </office:text>
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&apos;');
-}
-
-// ---------------------------------------------------------------------------
-// Raccoglitore di stili automatici
-// ---------------------------------------------------------------------------
-
-/// Accumula gli stili inline (bold, italic, ecc.) generati durante la
-/// serializzazione e assegna loro nomi univoci.
-///
-/// Produce poi il blocco `<office:automatic-styles>` da inserire in
-/// content.xml.
-class _StyleCollector {
-  final _styles = <Map<String, dynamic>, String>{};
-  var _counter = 0;
-
-  /// Restituisce il nome dello stile per un insieme di attributi Quill.
-  ///
-  /// Se lo stile è già stato visto, riutilizza il nome; altrimenti ne crea uno
-  /// nuovo.
-  String styleNameFor(Map<String, dynamic> attrs) {
-    return _styles.putIfAbsent(Map.unmodifiable(attrs), () {
-      _counter++;
-      return 'T$_counter';
-    });
-  }
-
-  /// Genera il blocco XML `<office:automatic-styles>` per tutti gli stili
-  /// raccolti.
-  String buildAutoStylesXml() {
-    if (_styles.isEmpty) return '';
-
-    final buf = StringBuffer();
-    for (final entry in _styles.entries) {
-      final attrs = entry.key;
-      final name = entry.value;
-      buf.writeln(
-        '    <style:style style:name="$name" style:family="text">',
-      );
-      buf.write('      <style:text-properties');
-
-      if (attrs['bold'] == true) {
-        buf.write(' fo:font-weight="bold"');
-      }
-      if (attrs['italic'] == true) {
-        buf.write(' fo:font-style="italic"');
-      }
-      if (attrs['underline'] == true) {
-        buf.write(' style:text-underline-style="solid"');
-        buf.write(' style:text-underline-width="auto"');
-        buf.write(' style:text-underline-color="font-color"');
-      }
-      if (attrs['strike'] == true) {
-        buf.write(' style:text-line-through-style="solid"');
-      }
-      if (attrs['color'] is String) {
-        buf.write(' fo:color="${attrs['color']}"');
-      }
-      if (attrs['size'] is String) {
-        buf.write(' fo:font-size="${attrs['size']}"');
-      }
-
-      buf.writeln('/>');
-      buf.writeln('    </style:style>');
-    }
-    return buf.toString();
-  }
 }

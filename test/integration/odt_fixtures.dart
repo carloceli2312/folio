@@ -15,19 +15,19 @@ class OdtFixtures {
 
   /// Documento minimale: un paragrafo di testo semplice.
   static Uint8List plainText() => _buildOdt(
-        contentBody: '<text:p text:style-name="P1">Hello world</text:p>',
-        autoStyles: '',
-      );
+    contentBody: '<text:p text:style-name="P1">Hello world</text:p>',
+    autoStyles: '',
+  );
 
   /// Documento con grassetto, corsivo e heading H1.
   /// Replica gli stili automatici come sono nominati da LibreOffice
   /// (T1, T2... per text styles, H1... per heading).
   static Uint8List formattedDocument() => _buildOdt(
-        contentBody: '''
+    contentBody: '''
 <text:h text:style-name="P_h1" text:outline-level="1">Titolo principale</text:h>
 <text:p text:style-name="P1">Questo è <text:span text:style-name="T1">grassetto</text:span> e questo è <text:span text:style-name="T2">corsivo</text:span>.</text:p>
 ''',
-        autoStyles: '''
+    autoStyles: '''
 <style:style style:name="T1" style:family="text">
   <style:text-properties fo:font-weight="bold"/>
 </style:style>
@@ -35,11 +35,11 @@ class OdtFixtures {
   <style:text-properties fo:font-style="italic"/>
 </style:style>
 ''',
-      );
+  );
 
   /// Documento con lista puntata e ordinata.
   static Uint8List documentWithLists() => _buildOdt(
-        contentBody: '''
+    contentBody: '''
 <text:p text:style-name="P1">Lista non ordinata:</text:p>
 <text:list text:style-name="L_bullet">
   <text:list-item><text:p>Mela</text:p></text:list-item>
@@ -51,7 +51,7 @@ class OdtFixtures {
   <text:list-item><text:p>Secondo</text:p></text:list-item>
 </text:list>
 ''',
-        autoStyles: '''
+    autoStyles: '''
 <text:list-style style:name="L_bullet">
   <text:list-level-style-bullet text:level="1" text:bullet-char="•"/>
 </text:list-style>
@@ -59,21 +59,79 @@ class OdtFixtures {
   <text:list-level-style-number text:level="1" style:num-format="1"/>
 </text:list-style>
 ''',
-      );
+  );
 
   /// Documento con un'immagine PNG 1×1 incorporata in `Pictures/`.
   static Uint8List documentWithImage() {
     // PNG 1×1 trasparente (header + IHDR + IDAT + IEND)
     final png = Uint8List.fromList(<int>[
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-      0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-      0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41,
-      0x54, 0x78, 0x9C, 0x62, 0x00, 0x01, 0x00, 0x00,
-      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-      0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
-      0x42, 0x60, 0x82,
+      0x89,
+      0x50,
+      0x4E,
+      0x47,
+      0x0D,
+      0x0A,
+      0x1A,
+      0x0A,
+      0x00,
+      0x00,
+      0x00,
+      0x0D,
+      0x49,
+      0x48,
+      0x44,
+      0x52,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x08,
+      0x06,
+      0x00,
+      0x00,
+      0x00,
+      0x1F,
+      0x15,
+      0xC4,
+      0x89,
+      0x00,
+      0x00,
+      0x00,
+      0x0D,
+      0x49,
+      0x44,
+      0x41,
+      0x54,
+      0x78,
+      0x9C,
+      0x62,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x05,
+      0x00,
+      0x01,
+      0x0D,
+      0x0A,
+      0x2D,
+      0xB4,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x49,
+      0x45,
+      0x4E,
+      0x44,
+      0xAE,
+      0x42,
+      0x60,
+      0x82,
     ]);
     return _buildOdt(
       contentBody: '''
@@ -107,7 +165,9 @@ class OdtFixtures {
     // mimetype: deve essere il PRIMO file e STORED (compressionType=0).
     // Senza questo, alcuni reader rifiutano il file. Replica esattamente
     // ciò che fa LibreOffice.
-    final mimetypeBytes = utf8.encode('application/vnd.oasis.opendocument.text');
+    final mimetypeBytes = utf8.encode(
+      'application/vnd.oasis.opendocument.text',
+    );
     archive.addFile(
       ArchiveFile('mimetype', mimetypeBytes.length, mimetypeBytes)
         ..compression = CompressionType.none,
@@ -129,7 +189,8 @@ class OdtFixtures {
     return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 
-  static String _wrapContent(String autoStyles, String body) => '''<?xml version="1.0" encoding="UTF-8"?>
+  static String _wrapContent(String autoStyles, String body) =>
+      '''<?xml version="1.0" encoding="UTF-8"?>
 <office:document-content
   xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
   xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"

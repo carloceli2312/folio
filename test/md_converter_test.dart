@@ -2,21 +2,20 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/converters/converter.dart';
-import 'package:folio/converters/md_converter.dart';
+import 'package:folio/folio.dart';
 
 void main() {
   const converter = MdConverter();
 
   Uint8List bytes(String s) => utf8.encode(s);
-  String md(String s) => utf8.decode(converter.toBytes(
-        converter.fromBytes(bytes(s)),
-      ));
+  String md(String s) =>
+      utf8.decode(converter.toBytes(converter.fromBytes(bytes(s))));
 
   group('MdConverter.fromBytes — import', () {
     test('paragrafo semplice → insert di testo + \\n', () {
       final delta = converter.fromBytes(bytes('Ciao mondo'));
-      final allText = delta.toList()
+      final allText = delta
+          .toList()
           .where((o) => o.data is String)
           .map((o) => o.data as String)
           .join();

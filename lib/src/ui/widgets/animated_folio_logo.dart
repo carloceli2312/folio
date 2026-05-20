@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Logo animato di Folio: squircle con lettera "F" serif e cursore lampeggiante.
-///
-/// Si adatta automaticamente al tema corrente (light/dark).
 class AnimatedFolioLogo extends StatefulWidget {
   final double size;
 
@@ -37,10 +35,12 @@ class _AnimatedFolioLogoState extends State<AnimatedFolioLogo>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0E8);
     final fgColor = isDark ? const Color(0xFFF5F0E8) : const Color(0xFF2C2C2C);
-    final cursorColor =
-        isDark ? const Color(0xFF8C8278) : const Color(0xFFC4B8A6);
-    final borderColor =
-        isDark ? const Color(0xFFF5F0E8) : const Color(0xFF2C2C2C);
+    final cursorColor = isDark
+        ? const Color(0xFF8C8278)
+        : const Color(0xFFC4B8A6);
+    final borderColor = isDark
+        ? const Color(0xFFF5F0E8)
+        : const Color(0xFF2C2C2C);
     final scale = widget.size / 120;
 
     return SizedBox(
@@ -59,8 +59,6 @@ class _AnimatedFolioLogoState extends State<AnimatedFolioLogo>
               scale: scale,
             ),
           ),
-          // "F" in Lora serif — resa come Text widget per garantire il font
-          // anche prima che il CustomPainter abbia caricato il typeface.
           Transform.translate(
             offset: Offset(-5 * scale, -4 * scale),
             child: Text(
@@ -97,7 +95,6 @@ class _LogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = scale;
 
-    // Bordo esterno (squircle)
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(14 * s, 8 * s, 92 * s, 92 * s),
@@ -106,7 +103,6 @@ class _LogoPainter extends CustomPainter {
       Paint()..color = borderColor,
     );
 
-    // Sfondo interno
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(17 * s, 11 * s, 86 * s, 86 * s),
@@ -115,7 +111,6 @@ class _LogoPainter extends CustomPainter {
       Paint()..color = bgColor,
     );
 
-    // Cursore: fade-in rapido (15% ciclo) → on → fade-out rapido (15%) → off
     final cursorOpacity = _softBlink(animation.value);
     canvas.drawRRect(
       RRect.fromRectAndRadius(

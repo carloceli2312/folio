@@ -3,8 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/odf_exceptions.dart';
-import 'package:folio/odf_parser.dart';
+import 'package:folio/folio.dart';
 
 /// Costruisce uno ZIP in memoria con i file forniti.
 Uint8List _zipWith(Map<String, String> files) {
@@ -32,14 +31,13 @@ void main() {
       final garbage = Uint8List.fromList(
         List<int>.generate(128, (i) => (i * 7) & 0xFF),
       );
-      expect(
-        () => OdfParser.parse(garbage),
-        throwsA(isA<OdfException>()),
-      );
+      expect(() => OdfParser.parse(garbage), throwsA(isA<OdfException>()));
     });
 
     test('ZIP senza content.xml → OdfMissingContentException', () {
-      final bytes = _zipWith({'mimetype': 'application/vnd.oasis.opendocument.text'});
+      final bytes = _zipWith({
+        'mimetype': 'application/vnd.oasis.opendocument.text',
+      });
       expect(
         () => OdfParser.parse(bytes),
         throwsA(isA<OdfMissingContentException>()),

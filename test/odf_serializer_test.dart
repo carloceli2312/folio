@@ -1,7 +1,7 @@
 import 'package:archive/archive.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/odf_serializer.dart';
+import 'package:folio/folio.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,8 +16,9 @@ String _contentXml(Delta delta) {
 }
 
 /// Costruisce un Delta con un singolo paragrafo di testo semplice.
-Delta _plainParagraph(String text) =>
-    Delta()..insert(text)..insert('\n');
+Delta _plainParagraph(String text) => Delta()
+  ..insert(text)
+  ..insert('\n');
 
 void main() {
   group('OdfSerializer', () {
@@ -41,10 +42,7 @@ void main() {
       final mimetype = String.fromCharCodes(
         archive.findFile('mimetype')!.content as List<int>,
       );
-      expect(
-        mimetype,
-        equals('application/vnd.oasis.opendocument.text'),
-      );
+      expect(mimetype, equals('application/vnd.oasis.opendocument.text'));
     });
 
     // -----------------------------------------------------------------------
@@ -180,29 +178,32 @@ void main() {
     // Round-trip: parse → serialize → parse
     // -----------------------------------------------------------------------
 
-    test('round-trip testo semplice: parse→serialize→parse preserva il testo',
-        () {
-      // Crea un Delta con più paragrafi
-      final original = Delta()
-        ..insert('Primo paragrafo')
-        ..insert('\n')
-        ..insert('Secondo paragrafo')
-        ..insert('\n');
+    test(
+      'round-trip testo semplice: parse→serialize→parse preserva il testo',
+      () {
+        // Crea un Delta con più paragrafi
+        final original = Delta()
+          ..insert('Primo paragrafo')
+          ..insert('\n')
+          ..insert('Secondo paragrafo')
+          ..insert('\n');
 
-      // Serializza in ODF
-      final odfBytes = OdfSerializer.serialize(original);
+        // Serializza in ODF
+        final odfBytes = OdfSerializer.serialize(original);
 
-      // Re-importa via parser
-      // ignore: avoid_relative_lib_imports
-      // (test diretto senza import per evitare dipendenza circolare nel test)
-      final archive = ZipDecoder().decodeBytes(odfBytes);
-      final contentXmlEntry = archive.findFile('content.xml')!;
-      final xmlContent =
-          String.fromCharCodes(contentXmlEntry.content as List<int>);
+        // Re-importa via parser
+        // ignore: avoid_relative_lib_imports
+        // (test diretto senza import per evitare dipendenza circolare nel test)
+        final archive = ZipDecoder().decodeBytes(odfBytes);
+        final contentXmlEntry = archive.findFile('content.xml')!;
+        final xmlContent = String.fromCharCodes(
+          contentXmlEntry.content as List<int>,
+        );
 
-      // Verifica che il testo sia presente nel XML prodotto
-      expect(xmlContent, contains('Primo paragrafo'));
-      expect(xmlContent, contains('Secondo paragrafo'));
-    });
+        // Verifica che il testo sia presente nel XML prodotto
+        expect(xmlContent, contains('Primo paragrafo'));
+        expect(xmlContent, contains('Secondo paragrafo'));
+      },
+    );
   });
 }

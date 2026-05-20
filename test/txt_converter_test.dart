@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/converters/converter.dart';
-import 'package:folio/converters/txt_converter.dart';
+import 'package:folio/folio.dart';
 
 void main() {
   const converter = TxtConverter();
@@ -33,27 +32,44 @@ void main() {
       expect(delta.toList().first.data, 'Riga 1\nRiga 2\nRiga 3\n');
     });
 
-    test('bytes non UTF-8 (Latin-1) → apertura senza crash, U+FFFD per i byte invalidi', () {
-      final latin1Bytes = Uint8List.fromList([0xC8, 0xE0, 0xF9]); // È à ù in Latin-1
-      expect(() => converter.fromBytes(latin1Bytes), returnsNormally);
-      final delta = converter.fromBytes(latin1Bytes);
-      expect(delta.toList(), isNotEmpty);
-    });
+    test(
+      'bytes non UTF-8 (Latin-1) → apertura senza crash, U+FFFD per i byte invalidi',
+      () {
+        final latin1Bytes = Uint8List.fromList([
+          0xC8,
+          0xE0,
+          0xF9,
+        ]); // È à ù in Latin-1
+        expect(() => converter.fromBytes(latin1Bytes), returnsNormally);
+        final delta = converter.fromBytes(latin1Bytes);
+        expect(delta.toList(), isNotEmpty);
+      },
+    );
 
-    test('archivio ZIP (firma PK) → ConversionException con messaggio chiaro', () {
-      // Simula un ODT salvato con estensione .txt
-      final zipBytes = Uint8List.fromList([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
-      expect(
-        () => converter.fromBytes(zipBytes),
-        throwsA(
-          isA<ConversionException>().having(
-            (e) => e.userMessage,
-            'userMessage',
-            contains('.odt'),
+    test(
+      'archivio ZIP (firma PK) → ConversionException con messaggio chiaro',
+      () {
+        // Simula un ODT salvato con estensione .txt
+        final zipBytes = Uint8List.fromList([
+          0x50,
+          0x4B,
+          0x03,
+          0x04,
+          0x14,
+          0x00,
+        ]);
+        expect(
+          () => converter.fromBytes(zipBytes),
+          throwsA(
+            isA<ConversionException>().having(
+              (e) => e.userMessage,
+              'userMessage',
+              contains('.odt'),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 
   group('TxtConverter.toBytes', () {

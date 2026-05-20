@@ -18,7 +18,12 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          # Versione fissata = stessa del dev locale. NON tornare a
+          # 'channel: stable' senza pin: flutter_quill 11.5.0 (ultima
+          # pubblicata) non compila su Flutter >= 3.44.0 (manca
+          # TextInputClient.onFocusReceived). Rivalutare quando
+          # flutter_quill rilascia una versione compatibile.
+          flutter-version: 3.41.9
 
       - name: Install dependencies
         run: flutter pub get

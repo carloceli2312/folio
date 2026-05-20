@@ -5,27 +5,18 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:folio/src/app/app_theme.dart';
+import 'package:folio/src/converters/md_converter.dart';
+import 'package:folio/src/converters/txt_converter.dart';
+import 'package:folio/src/odf/odf_serializer.dart';
+import 'package:folio/src/services/draft.dart';
+import 'package:folio/src/services/draft_service.dart';
+import 'package:folio/src/services/recent_file.dart';
+import 'package:folio/src/services/recent_files_service.dart';
+import 'package:folio/src/ui/editor/save_as_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';
-
-import 'app_theme.dart';
-import 'converters/md_converter.dart';
-import 'converters/txt_converter.dart';
-import 'draft_service.dart';
-import 'odf_serializer.dart';
-import 'recent_files_service.dart';
 
 /// Full-screen document editor.
-///
-/// Layout (Studio direction):
-/// - Dark AppBar with back button, file name (read-only), save action
-/// - QuillEditor filling the body (warm cream background)
-/// - Dark formatting toolbar pinned at the bottom
-///
-/// [savedPath] è il path locale del file ODT corrente (null = documento nuovo
-/// o importato via SAF senza ancora un salvataggio locale). Quando null, il
-/// pulsante "Salva" è disabilitato e il primo salvataggio passa per il dialog
-/// "Salva con nome".
 class EditorScreen extends StatefulWidget {
   const EditorScreen({
     super.key,
@@ -109,6 +100,7 @@ class _EditorScreenState extends State<EditorScreen> {
           fileName: '$_effectiveDisplayName.odt',
           deltaOps: _controller.document.toDelta().toJson(),
           savedAt: DateTime.now(),
+          savedPath: _savedPath,
         ),
       );
       if (!mounted) return;
@@ -118,28 +110,35 @@ class _EditorScreenState extends State<EditorScreen> {
     }
   }
 
-  // ─── Save (overwrite) ────────────────────────────────────────────────────
-
   Future<void> _save() async {
     if (_isSaving || _savedPath == null) return;
     setState(() => _isSaving = true);
     try {
       final newName = _effectiveDisplayName;
       final newFileName = '$newName.odt';
+      final oldFileName = '$_displayName.odt';
       final delta = _controller.document.toDelta();
       final bytes = OdfSerializer.serialize(delta);
 
-      final oldFile = File(_savedPath!);
+      final oldUserFile = File(_savedPath!);
       final sep = Platform.pathSeparator;
-      final newPath = '${oldFile.parent.path}$sep$newFileName';
+      final newUserPath = '${oldUserFile.parent.path}$sep$newFileName';
+      final renamed = newUserPath != _savedPath;
 
-      if (newPath != _savedPath) {
-        await File(newPath).writeAsBytes(bytes, flush: true);
+      if (renamed) {
+        await File(newUserPath).writeAsBytes(bytes, flush: true);
         try {
-          await oldFile.delete();
+          await oldUserFile.delete();
         } catch (_) {}
+        await _recentFiles.remove(
+          RecentFile(
+            name: oldFileName,
+            preview: '',
+            openedAt: DateTime.now(),
+          ),
+        );
       } else {
-        await oldFile.writeAsBytes(bytes, flush: true);
+        await oldUserFile.writeAsBytes(bytes, flush: true);
       }
 
       await _recentFiles.addOrPromote(
@@ -147,7 +146,7 @@ class _EditorScreenState extends State<EditorScreen> {
           name: newFileName,
           preview: RecentFilesService.previewFromDeltaOps(delta.toJson()),
           openedAt: DateTime.now(),
-          cachedPath: newPath,
+          userPath: newUserPath,
         ),
         bytes: bytes,
       );
@@ -157,31 +156,36 @@ class _EditorScreenState extends State<EditorScreen> {
 
       if (!mounted) return;
       setState(() {
-        _savedPath = newPath;
+        _savedPath = newUserPath;
         _displayName = newName;
         _draftSavedAt = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Salvato')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Salvato')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore nel salvataggio: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Errore nel salvataggio: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  // ─── Save As ────────────────────────────────────────────────────────────
-
   Future<void> _saveAs() async {
     if (_isSaving) return;
 
+    final Directory? initialFolder = _savedPath != null
+        ? File(_savedPath!).parent
+        : null;
+
     final result = await showDialog<({String filePath, String displayName})>(
       context: context,
-      builder: (_) => _SaveAsDialog(initialName: _effectiveDisplayName),
+      builder: (_) => SaveAsDialog(
+        initialName: _effectiveDisplayName,
+        initialFolder: initialFolder,
+      ),
     );
     if (result == null || !mounted) return;
 
@@ -195,41 +199,38 @@ class _EditorScreenState extends State<EditorScreen> {
       await file.writeAsBytes(bytes, flush: true);
 
       final fileName = '${result.displayName}.odt';
-      final updated = await _recentFiles.addOrPromote(
+      await _recentFiles.addOrPromote(
         RecentFile(
           name: fileName,
           preview: RecentFilesService.previewFromDeltaOps(delta.toJson()),
           openedAt: DateTime.now(),
+          userPath: result.filePath,
         ),
         bytes: bytes,
       );
-      final cachedPath = updated.firstWhere((e) => e.name == fileName,
-          orElse: () => updated.first).cachedPath;
 
       _draftTimer?.cancel();
       await _draftService.clear();
 
       if (!mounted) return;
       setState(() {
-        _savedPath = cachedPath ?? result.filePath;
+        _savedPath = result.filePath;
         _displayName = result.displayName;
         _draftSavedAt = null;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Salvato: $fileName')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Salvato: $fileName')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore nel salvataggio: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Errore nel salvataggio: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
-
-  // ─── Export ─────────────────────────────────────────────────────────────
 
   Future<void> _exportAs(String format) async {
     if (_isExporting) return;
@@ -256,20 +257,18 @@ class _EditorScreenState extends State<EditorScreen> {
         bytes: bytes,
       );
       if (savedPath == null || !mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Esportato: $fileName')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Esportato: $fileName')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore nell\'esportazione: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Errore nell\'esportazione: $e')));
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
   }
-
-  // ─── UI ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -329,9 +328,8 @@ class _EditorScreenState extends State<EditorScreen> {
         else ...[
           IconButton(
             icon: const Icon(Icons.save_outlined),
-            tooltip: 'Salva',
-            // Disabilitato finché il documento non ha un path locale.
-            onPressed: _hasSavedFile ? _save : null,
+            tooltip: _hasSavedFile ? 'Salva' : 'Salva con nome',
+            onPressed: _hasSavedFile ? _save : _saveAs,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -556,11 +554,7 @@ class _EditorScreenState extends State<EditorScreen> {
         null,
       ),
       paragraph: DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 16,
-          height: 1.7,
-          color: AppTheme.textPrimary,
-        ),
+        const TextStyle(fontSize: 16, height: 1.7, color: AppTheme.textPrimary),
         const HorizontalSpacing(0, 0),
         const VerticalSpacing(0, 6),
         const VerticalSpacing(0, 0),
@@ -568,155 +562,4 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
     );
   }
-}
-
-// ─── Save As Dialog ─────────────────────────────────────────────────────────
-
-class _SaveAsDialog extends StatefulWidget {
-  const _SaveAsDialog({required this.initialName});
-
-  final String initialName;
-
-  @override
-  State<_SaveAsDialog> createState() => _SaveAsDialogState();
-}
-
-class _SaveAsDialogState extends State<_SaveAsDialog> {
-  late final TextEditingController _nameCtrl;
-  Directory? _folder;
-  bool _loadingFolder = true;
-  bool _pickingFolder = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameCtrl = TextEditingController(text: widget.initialName);
-    _initFolder();
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initFolder() async {
-    final dir = await _folioDirectory();
-    if (!mounted) return;
-    setState(() {
-      _folder = dir;
-      _loadingFolder = false;
-    });
-  }
-
-  Future<void> _pickFolder() async {
-    setState(() => _pickingFolder = true);
-    try {
-      final path = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'Scegli cartella di salvataggio',
-      );
-      if (path != null && mounted) {
-        setState(() => _folder = Directory(path));
-      }
-    } finally {
-      if (mounted) setState(() => _pickingFolder = false);
-    }
-  }
-
-  String get _folderLabel {
-    final path = _folder?.path;
-    if (path == null) return '—';
-    final sep = Platform.pathSeparator;
-    final parts = path.split(sep).where((s) => s.isNotEmpty).toList();
-    if (parts.length <= 2) return path;
-    return '…$sep${parts[parts.length - 2]}$sep${parts.last}';
-  }
-
-  void _confirm() {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty || _folder == null) return;
-    final sep = Platform.pathSeparator;
-    final filePath = '${_folder!.path}$sep$name.odt';
-    Navigator.of(context).pop((filePath: filePath, displayName: name));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final canSave = !_loadingFolder && _folder != null;
-    return AlertDialog(
-      title: const Text('Salva con nome'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Nome file',
-              suffixText: '.odt',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _confirm(),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Cartella',
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: _loadingFolder
-                    ? const LinearProgressIndicator()
-                    : Text(
-                        _folderLabel,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: _pickingFolder ? null : _pickFolder,
-                child: const Text('Cambia'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annulla'),
-        ),
-        FilledButton(
-          onPressed: canSave ? _confirm : null,
-          child: const Text('Salva'),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/// Restituisce la directory di salvataggio predefinita di Folio.
-///
-/// Prova prima lo storage esterno app-specifico (visibile nel file manager
-/// sotto Android/data, senza permessi su Android 10+), poi ricade su
-/// getApplicationSupportDirectory (storage privato).
-Future<Directory> _folioDirectory() async {
-  try {
-    final ext = await getExternalStorageDirectory();
-    if (ext != null) {
-      final dir = Directory('${ext.path}/Folio');
-      await dir.create(recursive: true);
-      return dir;
-    }
-  } catch (_) {}
-  final app = await getApplicationSupportDirectory();
-  final dir = Directory('${app.path}/Folio');
-  await dir.create(recursive: true);
-  return dir;
 }

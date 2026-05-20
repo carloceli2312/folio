@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/draft_service.dart';
+import 'package:folio/folio.dart';
 
 void main() {
   late Directory tmpDir;
@@ -40,7 +40,37 @@ void main() {
         {'insert': 'Ciao\n'},
       ]);
       expect(loaded.savedAt, DateTime.utc(2026, 4, 30, 12));
+      expect(loaded.savedPath, isNull);
     });
+
+    test('savedPath sopravvive al round-trip save → load', () async {
+      await service.save(
+        Draft(
+          fileName: 'doc.odt',
+          deltaOps: [
+            {'insert': 'Ciao\n'},
+          ],
+          savedAt: DateTime.utc(2026, 4, 30, 12),
+          savedPath: '/data/recents/doc.odt',
+        ),
+      );
+      final loaded = await service.load();
+      expect(loaded!.savedPath, '/data/recents/doc.odt');
+    });
+
+    test(
+      'bozza legacy senza savedPath → load la accetta con savedPath null',
+      () async {
+        final file = File('${tmpDir.path}/draft.json');
+        await file.writeAsString(
+          '{"fileName":"x.odt","deltaOps":[],'
+          '"savedAt":"2026-04-30T00:00:00.000Z"}',
+        );
+        final loaded = await service.load();
+        expect(loaded, isNotNull);
+        expect(loaded!.savedPath, isNull);
+      },
+    );
 
     test('save su bozza già esistente la sovrascrive', () async {
       await service.save(
@@ -86,18 +116,22 @@ void main() {
       expect(await service.exists(), isFalse);
     });
 
-    test('file con JSON corrotto → load restituisce null senza crash',
-        () async {
-      final file = File('${tmpDir.path}/draft.json');
-      await file.writeAsString('{ not valid json');
-      expect(await service.load(), isNull);
-    });
+    test(
+      'file con JSON corrotto → load restituisce null senza crash',
+      () async {
+        final file = File('${tmpDir.path}/draft.json');
+        await file.writeAsString('{ not valid json');
+        expect(await service.load(), isNull);
+      },
+    );
 
-    test('file con JSON valido ma campi mancanti → load restituisce null',
-        () async {
-      final file = File('${tmpDir.path}/draft.json');
-      await file.writeAsString('{"fileName": "x.odt"}');
-      expect(await service.load(), isNull);
-    });
+    test(
+      'file con JSON valido ma campi mancanti → load restituisce null',
+      () async {
+        final file = File('${tmpDir.path}/draft.json');
+        await file.writeAsString('{"fileName": "x.odt"}');
+        expect(await service.load(), isNull);
+      },
+    );
   });
 }

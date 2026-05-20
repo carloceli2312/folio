@@ -1,6 +1,6 @@
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:folio/odf_parser.dart';
+import 'package:folio/folio.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal ODF content.xml fixtures
@@ -19,7 +19,8 @@ const _nsdecl = '''
 
 /// Wraps arbitrary body content in a minimal but well-formed content.xml
 /// document.
-String _wrapBody(String bodyXml, {String autoStyles = ''}) => '''
+String _wrapBody(String bodyXml, {String autoStyles = ''}) =>
+    '''
 <?xml version="1.0" encoding="UTF-8"?>
 <office:document-content $_nsdecl>
   <office:automatic-styles>$autoStyles</office:automatic-styles>
@@ -85,9 +86,7 @@ void main() {
     // -----------------------------------------------------------------------
 
     test('heading element carries header attribute on its \\n', () {
-      final xml = _wrapBody(
-        '<text:h text:outline-level="1">My Title</text:h>',
-      );
+      final xml = _wrapBody('<text:h text:outline-level="1">My Title</text:h>');
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -99,9 +98,7 @@ void main() {
     });
 
     test('heading level 2 sets header:2', () {
-      final xml = _wrapBody(
-        '<text:h text:outline-level="2">Sub</text:h>',
-      );
+      final xml = _wrapBody('<text:h text:outline-level="2">Sub</text:h>');
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -226,9 +223,7 @@ void main() {
     // -----------------------------------------------------------------------
 
     test('<text:line-break/> inserts a newline inside the paragraph', () {
-      final xml = _wrapBody(
-        '<text:p>Line 1<text:line-break/>Line 2</text:p>',
-      );
+      final xml = _wrapBody('<text:p>Line 1<text:line-break/>Line 2</text:p>');
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -248,9 +243,7 @@ void main() {
     });
 
     test('<text:s text:c="3"/> inserts three spaces', () {
-      final xml = _wrapBody(
-        '<text:p>A<text:s text:c="3"/>B</text:p>',
-      );
+      final xml = _wrapBody('<text:p>A<text:s text:c="3"/>B</text:p>');
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -297,15 +290,12 @@ void main() {
           <text:list-level-style-number text:level="1" text:start-value="1" style:num-format="1"/>
         </text:list-style>
       ''';
-      final xml = _wrapBody(
-        '''
+      final xml = _wrapBody('''
         <text:list text:style-name="L1">
           <text:list-item><text:p>First</text:p></text:list-item>
           <text:list-item><text:p>Second</text:p></text:list-item>
         </text:list>
-        ''',
-        autoStyles: autoStyles,
-      );
+        ''', autoStyles: autoStyles);
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -321,14 +311,11 @@ void main() {
           <text:list-level-style-bullet text:level="1" text:bullet-char="•"/>
         </text:list-style>
       ''';
-      final xml = _wrapBody(
-        '''
+      final xml = _wrapBody('''
         <text:list text:style-name="L2">
           <text:list-item><text:p>Alpha</text:p></text:list-item>
         </text:list>
-        ''',
-        autoStyles: autoStyles,
-      );
+        ''', autoStyles: autoStyles);
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
@@ -352,9 +339,7 @@ void main() {
     // -----------------------------------------------------------------------
 
     test('hyperlink senza href: testo incluso senza attributi', () {
-      final xml = _wrapBody(
-        '<text:p><text:a>Click here</text:a></text:p>',
-      );
+      final xml = _wrapBody('<text:p><text:a>Click here</text:a></text:p>');
       final delta = OdfParser.parseContentXml(xml);
       final ops = _ops(delta);
 
