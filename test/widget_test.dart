@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:folio/folio.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -18,9 +19,14 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        localizationsDelegates: [FlutterQuillLocalizations.delegate],
-        home: HomeScreen(),
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const HomeScreen(),
       ),
     );
     await tester.pump();
@@ -29,7 +35,7 @@ void main() {
     expect(find.text('Folio'), findsOneWidget);
 
     // Il messaggio di stato vuoto è visibile quando non ci sono documenti.
-    expect(find.text('Nessun documento recente'), findsOneWidget);
+    expect(find.text('No recent documents'), findsOneWidget);
 
     // Il pulsante per aprire un documento è presente.
     expect(find.byIcon(Icons.folder_open_outlined), findsWidgets);

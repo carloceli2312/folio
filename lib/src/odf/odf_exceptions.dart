@@ -1,38 +1,35 @@
 /// Typed exceptions raised by [OdfParser] / [OdfSerializer].
+///
+/// The hierarchy is `sealed`: each subtype is a locale-agnostic error code.
+/// The UI layer is responsible for turning the runtime type into a
+/// localized, user-facing message.
 sealed class OdfException implements Exception {
-  const OdfException(this.userMessage, [this.cause]);
+  const OdfException([this.cause]);
 
-  /// Messaggio in italiano, già pronto per essere mostrato in SnackBar/dialog.
-  final String userMessage;
-
-  /// Eccezione originale (se presente). Usata solo per log, non per la UI.
+  /// Original exception (if any). Used only for logging, never for the UI.
   final Object? cause;
 
   @override
   String toString() =>
-      cause == null ? userMessage : '$userMessage (causa: $cause)';
+      cause == null ? '$runtimeType' : '$runtimeType (cause: $cause)';
 }
 
-/// Il file non è un archivio ZIP valido (o è troncato/corrotto).
+/// The file is not a valid ZIP archive (or is truncated/corrupted).
 class OdfInvalidArchiveException extends OdfException {
-  const OdfInvalidArchiveException([Object? cause])
-    : super('Il file non sembra essere un documento .odt valido.', cause);
+  const OdfInvalidArchiveException([super.cause]);
 }
 
-/// L'archivio ZIP non contiene `content.xml`.
+/// The ZIP archive does not contain `content.xml`.
 class OdfMissingContentException extends OdfException {
-  const OdfMissingContentException()
-    : super('Il documento è incompleto: manca content.xml.');
+  const OdfMissingContentException();
 }
 
-/// `content.xml` esiste ma non è XML ben formato o non rispetta lo schema ODF.
+/// `content.xml` exists but is not well-formed XML or violates the ODF schema.
 class OdfMalformedXmlException extends OdfException {
-  const OdfMalformedXmlException([Object? cause])
-    : super('Il contenuto del documento è danneggiato.', cause);
+  const OdfMalformedXmlException([super.cause]);
 }
 
-/// Errore generico non classificabile durante parsing/serializzazione.
+/// Generic unclassified failure during parsing/serialization.
 class OdfUnknownException extends OdfException {
-  const OdfUnknownException([Object? cause])
-    : super('Errore imprevisto durante l\'elaborazione del documento.', cause);
+  const OdfUnknownException([super.cause]);
 }

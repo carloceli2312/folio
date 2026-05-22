@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/services/draft.dart';
 import 'package:folio/src/services/recent_file.dart';
 import 'package:folio/src/ui/home/widgets/draft_banner.dart';
@@ -55,7 +56,7 @@ class RecentsList extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 4, left: 4),
             child: Text(
-              'Recenti',
+              AppLocalizations.of(context)!.recentSectionTitle,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           );

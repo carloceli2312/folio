@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/app/app_theme.dart';
 import 'package:folio/src/converters/md_converter.dart';
 import 'package:folio/src/converters/txt_converter.dart';
@@ -55,7 +56,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   String get _effectiveDisplayName {
     final t = _titleCtrl.text.trim();
-    return t.isEmpty ? 'Documento senza titolo' : t;
+    return t.isEmpty ? AppLocalizations.of(context)!.untitledDocument : t;
   }
 
   final RecentFilesService _recentFiles = RecentFilesService();
@@ -112,6 +113,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> _save() async {
     if (_isSaving || _savedPath == null) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSaving = true);
     try {
       final newName = _effectiveDisplayName;
@@ -162,12 +164,12 @@ class _EditorScreenState extends State<EditorScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Salvato')));
+      ).showSnackBar(SnackBar(content: Text(l10n.saved)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Errore nel salvataggio: $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.errorSaving(e.toString()))));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -175,6 +177,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> _saveAs() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
 
     final Directory? initialFolder = _savedPath != null
         ? File(_savedPath!).parent
@@ -221,12 +224,12 @@ class _EditorScreenState extends State<EditorScreen> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Salvato: $fileName')));
+      ).showSnackBar(SnackBar(content: Text(l10n.savedAs(fileName))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Errore nel salvataggio: $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.errorSaving(e.toString()))));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -234,6 +237,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> _exportAs(String format) async {
     if (_isExporting) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isExporting = true);
     try {
       final delta = _controller.document.toDelta();
@@ -250,7 +254,7 @@ class _EditorScreenState extends State<EditorScreen> {
           return;
       }
       final savedPath = await FilePicker.platform.saveFile(
-        dialogTitle: 'Esporta come $format',
+        dialogTitle: l10n.exportDialogTitle(format),
         fileName: fileName,
         type: FileType.custom,
         allowedExtensions: [format],
@@ -259,12 +263,12 @@ class _EditorScreenState extends State<EditorScreen> {
       if (savedPath == null || !mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Esportato: $fileName')));
+      ).showSnackBar(SnackBar(content: Text(l10n.exported(fileName))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Errore nell\'esportazione: $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.errorExporting(e.toString()))));
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
@@ -287,6 +291,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   AppBar _buildAppBar() {
+    final l10n = AppLocalizations.of(context)!;
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
@@ -302,9 +307,9 @@ class _EditorScreenState extends State<EditorScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           if (_draftSavedAt != null)
-            const Text(
-              'Bozza salvata',
-              style: TextStyle(
+            Text(
+              l10n.draftSaved,
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
@@ -328,12 +333,12 @@ class _EditorScreenState extends State<EditorScreen> {
         else ...[
           IconButton(
             icon: const Icon(Icons.save_outlined),
-            tooltip: _hasSavedFile ? 'Salva' : 'Salva con nome',
+            tooltip: _hasSavedFile ? l10n.save : l10n.saveAs,
             onPressed: _hasSavedFile ? _save : _saveAs,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            tooltip: 'Altro',
+            tooltip: l10n.more,
             onSelected: (value) {
               if (value == 'save_as') {
                 _saveAs();
@@ -342,11 +347,11 @@ class _EditorScreenState extends State<EditorScreen> {
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'save_as',
                 child: ListTile(
-                  leading: Icon(Icons.save_as_outlined),
-                  title: Text('Salva con nome'),
+                  leading: const Icon(Icons.save_as_outlined),
+                  title: Text(l10n.saveAs),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -359,7 +364,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     color: _hasSavedFile ? null : Colors.black26,
                   ),
                   title: Text(
-                    'Esporta come Markdown (.md)',
+                    l10n.exportAsMarkdown,
                     style: _hasSavedFile
                         ? null
                         : const TextStyle(color: Colors.black26),
@@ -376,7 +381,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     color: _hasSavedFile ? null : Colors.black26,
                   ),
                   title: Text(
-                    'Esporta come testuale (.txt)',
+                    l10n.exportAsText,
                     style: _hasSavedFile
                         ? null
                         : const TextStyle(color: Colors.black26),
@@ -392,6 +397,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildTitleField() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
       child: TextField(
@@ -402,10 +408,10 @@ class _EditorScreenState extends State<EditorScreen> {
           color: AppTheme.textPrimary,
           height: 1.2,
         ),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           border: InputBorder.none,
-          hintText: 'Documento senza titolo',
-          hintStyle: TextStyle(color: AppTheme.textSecondary),
+          hintText: l10n.untitledDocument,
+          hintStyle: const TextStyle(color: AppTheme.textSecondary),
           isDense: true,
           contentPadding: EdgeInsets.zero,
         ),
@@ -416,12 +422,13 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildEditor() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: QuillEditor.basic(
         controller: _controller,
         config: QuillEditorConfig(
-          placeholder: 'Inizia a scrivere…',
+          placeholder: l10n.editorPlaceholder,
           customStyles: _buildEditorStyles(),
         ),
       ),

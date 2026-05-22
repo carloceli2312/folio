@@ -47,7 +47,7 @@ void main() {
     );
 
     test(
-      'archivio ZIP (firma PK) → ConversionException con messaggio chiaro',
+      'archivio ZIP (firma PK) → ConversionException odfFileNotPlainText',
       () {
         // Simula un ODT salvato con estensione .txt
         final zipBytes = Uint8List.fromList([
@@ -62,9 +62,9 @@ void main() {
           () => converter.fromBytes(zipBytes),
           throwsA(
             isA<ConversionException>().having(
-              (e) => e.userMessage,
-              'userMessage',
-              contains('.odt'),
+              (e) => e.kind,
+              'kind',
+              ConversionErrorKind.odfFileNotPlainText,
             ),
           ),
         );

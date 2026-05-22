@@ -1,0 +1,279 @@
+{
+  "@@locale": "en",
+
+  "appSubtitle": "Document editor",
+  "@appSubtitle": {
+    "description": "Subtitle shown under the app name on the home header"
+  },
+
+  "open": "Open",
+  "@open": {
+    "description": "Label of the Open button in the home header"
+  },
+
+  "openDocument": "Open document",
+  "@openDocument": {
+    "description": "Label of the button in the empty state that opens the file picker"
+  },
+
+  "noRecentDocuments": "No recent documents",
+  "@noRecentDocuments": {
+    "description": "Empty state title shown when there are no recent files or drafts"
+  },
+
+  "emptyStateSubtitle": "Open an existing .odt file or create\na new document to get started.",
+  "@emptyStateSubtitle": {
+    "description": "Empty state subtitle inviting the user to open or create a document"
+  },
+
+  "recentSectionTitle": "Recent",
+  "@recentSectionTitle": {
+    "description": "Section header above the list of recently opened documents"
+  },
+
+  "newDocument": "New document",
+  "@newDocument": {
+    "description": "Tooltip of the new-document button and default name for a new document"
+  },
+
+  "loadingOpeningDocument": "Opening document…",
+  "@loadingOpeningDocument": {
+    "description": "Message shown in the loading overlay while a document is being parsed"
+  },
+
+  "unsavedDraft": "Unsaved draft",
+  "@unsavedDraft": {
+    "description": "Title of the banner offering to resume an unsaved draft"
+  },
+
+  "tapToResume": "Tap to resume {name}",
+  "@tapToResume": {
+    "description": "Draft banner subtitle inviting the user to resume editing a draft",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "My document"
+      }
+    }
+  },
+
+  "discardDraft": "Discard draft",
+  "@discardDraft": {
+    "description": "Tooltip of the button that discards an unsaved draft"
+  },
+
+  "documentFallbackName": "document",
+  "@documentFallbackName": {
+    "description": "Generic noun used when a document has no name"
+  },
+
+  "dateToday": "Today",
+  "@dateToday": {
+    "description": "Relative date for a document opened today"
+  },
+
+  "dateYesterday": "Yesterday",
+  "@dateYesterday": {
+    "description": "Relative date for a document opened yesterday"
+  },
+
+  "dateDaysAgo": "{days, plural, one{1 day ago} other{{days} days ago}}",
+  "@dateDaysAgo": {
+    "description": "Relative date for a document opened a few days ago",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+
+  "errorCannotReadFile": "Unable to read the file.",
+  "@errorCannotReadFile": {
+    "description": "Error shown when the picked file has no readable bytes"
+  },
+
+  "errorUnsupportedFormat": "Unsupported format: .{ext}",
+  "@errorUnsupportedFormat": {
+    "description": "Error shown when the picked file has an unsupported extension",
+    "placeholders": {
+      "ext": {
+        "type": "String",
+        "example": "pdf"
+      }
+    }
+  },
+
+  "errorUnexpectedOpening": "An unexpected error occurred while opening the document.",
+  "@errorUnexpectedOpening": {
+    "description": "Generic error shown when opening a document fails unexpectedly"
+  },
+
+  "errorCacheUnavailable": "Cache no longer available for \"{name}\". Open it manually.",
+  "@errorCacheUnavailable": {
+    "description": "Error shown when a recent file can no longer be opened from cache",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "report.odt"
+      }
+    }
+  },
+
+  "untitledDocument": "Untitled document",
+  "@untitledDocument": {
+    "description": "Default name shown for a document without a title"
+  },
+
+  "editorPlaceholder": "Start writing…",
+  "@editorPlaceholder": {
+    "description": "Placeholder text shown in the empty editor"
+  },
+
+  "draftSaved": "Draft saved",
+  "@draftSaved": {
+    "description": "Caption shown in the editor app bar after a draft is auto-saved"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Tooltip of the save button when the document already has a file"
+  },
+
+  "saveAs": "Save as",
+  "@saveAs": {
+    "description": "Label used for the save-as action, dialog title and menu item"
+  },
+
+  "more": "More",
+  "@more": {
+    "description": "Tooltip of the editor overflow menu"
+  },
+
+  "exportAsMarkdown": "Export as Markdown (.md)",
+  "@exportAsMarkdown": {
+    "description": "Overflow menu item that exports the document as Markdown"
+  },
+
+  "exportAsText": "Export as plain text (.txt)",
+  "@exportAsText": {
+    "description": "Overflow menu item that exports the document as plain text"
+  },
+
+  "saved": "Saved",
+  "@saved": {
+    "description": "Confirmation shown after the document is saved in place"
+  },
+
+  "savedAs": "Saved: {fileName}",
+  "@savedAs": {
+    "description": "Confirmation shown after the document is saved to a new file",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "report.odt"
+      }
+    }
+  },
+
+  "exported": "Exported: {fileName}",
+  "@exported": {
+    "description": "Confirmation shown after the document is exported",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "report.md"
+      }
+    }
+  },
+
+  "errorSaving": "Error while saving: {error}",
+  "@errorSaving": {
+    "description": "Error shown when saving the document fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "errorExporting": "Error while exporting: {error}",
+  "@errorExporting": {
+    "description": "Error shown when exporting the document fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "exportDialogTitle": "Export as {format}",
+  "@exportDialogTitle": {
+    "description": "Title of the system save dialog used when exporting",
+    "placeholders": {
+      "format": {
+        "type": "String",
+        "example": "md"
+      }
+    }
+  },
+
+  "fileNameLabel": "File name",
+  "@fileNameLabel": {
+    "description": "Label of the file name field in the Save as dialog"
+  },
+
+  "folderLabel": "Folder",
+  "@folderLabel": {
+    "description": "Label of the destination folder field in the Save as dialog"
+  },
+
+  "change": "Change",
+  "@change": {
+    "description": "Button that lets the user pick a different destination folder"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Button that dismisses the Save as dialog without saving"
+  },
+
+  "chooseFolderDialogTitle": "Choose save folder",
+  "@chooseFolderDialogTitle": {
+    "description": "Title of the system folder picker shown from the Save as dialog"
+  },
+
+  "odfErrorInvalidArchive": "This file does not look like a valid .odt document.",
+  "@odfErrorInvalidArchive": {
+    "description": "Error shown when an .odt file is not a valid ZIP archive"
+  },
+
+  "odfErrorMissingContent": "The document is incomplete: content.xml is missing.",
+  "@odfErrorMissingContent": {
+    "description": "Error shown when an .odt archive has no content.xml entry"
+  },
+
+  "odfErrorMalformedXml": "The document content is corrupted.",
+  "@odfErrorMalformedXml": {
+    "description": "Error shown when content.xml is not well-formed XML"
+  },
+
+  "odfErrorUnknown": "An unexpected error occurred while processing the document.",
+  "@odfErrorUnknown": {
+    "description": "Error shown for an unclassified failure while parsing an .odt file"
+  },
+
+  "conversionErrorNotValidUtf8": "The file is not valid UTF-8 text.",
+  "@conversionErrorNotValidUtf8": {
+    "description": "Error shown when an imported file is not valid UTF-8 text"
+  },
+
+  "conversionErrorMarkdownFailed": "The Markdown file could not be converted.",
+  "@conversionErrorMarkdownFailed": {
+    "description": "Error shown when a Markdown file cannot be converted to a document"
+  },
+
+  "conversionErrorOdfNotPlainText": "This file looks like an ODF document, not plain text. Rename it to .odt and open it with \"Open\".",
+  "@conversionErrorOdfNotPlainText": {
+    "description": "Error shown when an ODF file is opened as plain text"
+  }
+}

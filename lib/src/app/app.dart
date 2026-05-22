@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/app/splash_screen.dart';
 
 import 'app_theme.dart';
@@ -16,7 +18,14 @@ class FolioApp extends StatelessWidget {
 
       theme: AppTheme.theme,
 
-      localizationsDelegates: const [FlutterQuillLocalizations.delegate],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
 
       home: const SplashScreen(),
 
