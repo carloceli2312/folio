@@ -28,7 +28,7 @@ Folio is currently in **public beta**. The core editing flow is stable and teste
 
 - Current release: **v0.1.0 (beta)**
 - Platforms: **Android 8.0+** (Oreo and above)
-- Distribution: **GitHub Releases only** — not yet on the Play Store
+- Distribution: **GitHub Releases** — **Play Store Closed Beta** (https://groups.google.com/g/folio-beta-closed and then https://play.google.com/store/apps/details?id=com.carloceli.folio (or https://play.google.com/apps/testing/com.carloceli.folio))
 
 ## Why Folio
 
