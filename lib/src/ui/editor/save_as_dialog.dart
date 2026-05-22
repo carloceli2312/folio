@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Dialog "Salva con nome": chiede nome file e cartella di destinazione.
@@ -57,10 +58,11 @@ class _SaveAsDialogState extends State<SaveAsDialog> {
   }
 
   Future<void> _pickFolder() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _pickingFolder = true);
     try {
       final path = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'Scegli cartella di salvataggio',
+        dialogTitle: l10n.chooseFolderDialogTitle,
       );
       if (path != null && mounted) {
         setState(() => _folder = Directory(path));
@@ -89,9 +91,10 @@ class _SaveAsDialogState extends State<SaveAsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final canSave = !_loadingFolder && _folder != null;
     return AlertDialog(
-      title: const Text('Salva con nome'),
+      title: Text(l10n.saveAs),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,15 +102,15 @@ class _SaveAsDialogState extends State<SaveAsDialog> {
           TextField(
             controller: _nameCtrl,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Nome file',
+            decoration: InputDecoration(
+              labelText: l10n.fileNameLabel,
               suffixText: '.odt',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _confirm(),
           ),
           const SizedBox(height: 20),
-          Text('Cartella', style: Theme.of(context).textTheme.labelMedium),
+          Text(l10n.folderLabel, style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 6),
           Row(
             children: [
@@ -123,7 +126,7 @@ class _SaveAsDialogState extends State<SaveAsDialog> {
               const SizedBox(width: 8),
               TextButton(
                 onPressed: _pickingFolder ? null : _pickFolder,
-                child: const Text('Cambia'),
+                child: Text(l10n.change),
               ),
             ],
           ),
@@ -132,11 +135,11 @@ class _SaveAsDialogState extends State<SaveAsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annulla'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: canSave ? _confirm : null,
-          child: const Text('Salva'),
+          child: Text(l10n.save),
         ),
       ],
     );

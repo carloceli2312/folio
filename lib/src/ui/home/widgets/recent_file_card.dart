@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/app/app_theme.dart';
 import 'package:folio/src/services/recent_file.dart';
 
@@ -66,7 +67,7 @@ class RecentFileCard extends StatelessWidget {
                     ],
                     const SizedBox(height: 8),
                     Text(
-                      _formatRelativeDate(file.openedAt),
+                      _formatRelativeDate(context, file.openedAt),
                       style: theme.textTheme.labelSmall,
                     ),
                   ],
@@ -80,17 +81,16 @@ class RecentFileCard extends StatelessWidget {
   }
 }
 
-/// Restituisce una stringa relativa in italiano (es. "oggi", "ieri",
-/// "3 giorni fa", "12/03/2026") basata su [date].
-String _formatRelativeDate(DateTime date) {
+/// Returns a locale-aware relative date label (e.g. "Today", "Yesterday",
+/// "3 days ago", "12 Mar 2026") for [date].
+String _formatRelativeDate(BuildContext context, DateTime date) {
+  final l10n = AppLocalizations.of(context)!;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final that = DateTime(date.year, date.month, date.day);
   final days = today.difference(that).inDays;
-  if (days <= 0) return 'Oggi';
-  if (days == 1) return 'Ieri';
-  if (days < 7) return '$days giorni fa';
-  final dd = date.day.toString().padLeft(2, '0');
-  final mm = date.month.toString().padLeft(2, '0');
-  return '$dd/$mm/${date.year}';
+  if (days <= 0) return l10n.dateToday;
+  if (days == 1) return l10n.dateYesterday;
+  if (days < 7) return l10n.dateDaysAgo(days);
+  return MaterialLocalizations.of(context).formatShortDate(date);
 }

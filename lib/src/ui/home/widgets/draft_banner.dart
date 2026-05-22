@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/app/app_theme.dart';
 import 'package:folio/src/services/draft.dart';
 
@@ -18,6 +19,7 @@ class DraftBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: AppTheme.darkChrome,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -40,14 +42,14 @@ class DraftBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bozza non salvata',
+                      l10n.unsavedDraft,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Tocca per riprendere ${_safeName(draft.fileName)}',
+                      l10n.tapToResume(_safeName(context, draft.fileName)),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white70,
                       ),
@@ -58,7 +60,7 @@ class DraftBanner extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'Scarta bozza',
+                tooltip: l10n.discardDraft,
                 icon: const Icon(Icons.close, color: Colors.white70),
                 onPressed: onDiscard,
               ),
@@ -69,11 +71,13 @@ class DraftBanner extends StatelessWidget {
     );
   }
 
-  String _safeName(String fileName) {
+  String _safeName(BuildContext context, String fileName) {
     final stripped = fileName.replaceAll(
       RegExp(r'\.odt$', caseSensitive: false),
       '',
     );
-    return stripped.isEmpty ? 'documento' : stripped;
+    return stripped.isEmpty
+        ? AppLocalizations.of(context)!.documentFallbackName
+        : stripped;
   }
 }

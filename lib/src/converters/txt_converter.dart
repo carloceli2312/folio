@@ -21,8 +21,7 @@ class TxtConverter extends DocumentConverter {
         bytes[2] == 0x03 &&
         bytes[3] == 0x04) {
       throw const ConversionException(
-        'Il file sembra un documento ODF, non un testo normale. '
-        'Rinominalo in .odt e aprilo con "Apri".',
+        ConversionErrorKind.odfFileNotPlainText,
       );
     }
     final text = utf8.decode(bytes, allowMalformed: true);

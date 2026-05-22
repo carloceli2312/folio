@@ -54,15 +54,16 @@ void main() {
       );
     });
 
-    test('messaggio utente è in italiano e non espone i dettagli interni', () {
+    test('OdfException classifica l\'errore tramite il tipo sealed', () {
       try {
         OdfParser.parse(Uint8List(0));
         fail('expected exception');
       } on OdfException catch (e) {
-        expect(e.userMessage, isNotEmpty);
-        expect(e.userMessage, isNot(contains('Exception')));
-        expect(e.userMessage, isNot(contains('Archive')));
-        expect(e.userMessage, isNot(contains('XmlParser')));
+        // Opzione A: il domain non porta più un messaggio localizzato; la
+        // classificazione avviene tramite il tipo sealed e il messaggio
+        // utente viene risolto nello strato UI.
+        expect(e, isA<OdfInvalidArchiveException>());
+        expect(e.toString(), isNotEmpty);
       }
     });
   });

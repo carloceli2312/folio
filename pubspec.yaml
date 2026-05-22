@@ -30,7 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
+  intl: any
   archive: ^4.0.9
   xml: ^6.6.1
   flutter_quill: ^11.5.0
@@ -66,6 +69,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Generates the localization classes from the ARB files in lib/l10n.
+  generate: true
 
   assets:
     - assets/icons/

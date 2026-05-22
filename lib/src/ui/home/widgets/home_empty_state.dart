@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/app/app_theme.dart';
 import 'package:folio/src/ui/widgets/animated_folio_logo.dart';
 
@@ -19,6 +20,7 @@ class HomeEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
@@ -28,12 +30,12 @@ class HomeEmptyState extends StatelessWidget {
             const AnimatedFolioLogo(size: 80),
             const SizedBox(height: 20),
             Text(
-              'Nessun documento recente',
+              l10n.noRecentDocuments,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Apri un file .odt esistente o crea\nun nuovo documento per iniziare.',
+              l10n.emptyStateSubtitle,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -41,7 +43,7 @@ class HomeEmptyState extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: isOpening ? null : onOpen,
               icon: const Icon(Icons.folder_open_outlined, size: 16),
-              label: const Text('Apri documento'),
+              label: Text(l10n.openDocument),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.textPrimary,
                 side: const BorderSide(color: AppTheme.divider),

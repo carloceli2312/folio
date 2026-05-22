@@ -20,12 +20,12 @@ class MdConverter extends DocumentConverter {
     try {
       source = utf8.decode(bytes);
     } catch (e) {
-      throw ConversionException('Il file non è testo UTF-8 valido.', e);
+      throw ConversionException(ConversionErrorKind.notValidUtf8, e);
     }
     try {
       return _mdToDelta(source);
     } catch (e) {
-      throw ConversionException('Impossibile convertire il Markdown.', e);
+      throw ConversionException(ConversionErrorKind.markdownConversionFailed, e);
     }
   }
 

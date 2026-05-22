@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:folio/l10n/app_localizations.dart';
 import 'package:folio/src/converters/conversion_exception.dart';
 import 'package:folio/src/converters/converter.dart';
 import 'package:folio/src/converters/md_converter.dart';
@@ -98,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Flusso principale: scegli file → leggi bytes → parsa su isolate →
   /// costruisci il controller → promuovi nei recenti → apri l'editor.
   Future<void> _openDocument() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isOpening = true);
 
     try {
@@ -114,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final Uint8List? bytes = file.bytes;
 
       if (bytes == null) {
-        _showError('Impossibile leggere il file.');
+        _showError(l10n.errorCannotReadFile);
         return;
       }
 
@@ -128,22 +130,22 @@ class _HomeScreenState extends State<HomeScreen> {
         } else {
           final converter = _converters[ext];
           if (converter == null) {
-            _showError('Formato non supportato: .$ext');
+            _showError(l10n.errorUnsupportedFormat(ext));
             return;
           }
           delta = await compute(_runConverter, (converter, bytes));
         }
       }
       on OdfException catch (e) {
-        _showError(e.userMessage);
+        _showError(_odfErrorMessage(l10n, e));
         debugPrint('ODF parse failed: $e');
         return;
       } on ConversionException catch (e) {
-        _showError(e.userMessage);
+        _showError(_conversionErrorMessage(l10n, e));
         debugPrint('Conversion failed: $e');
         return;
       } catch (e) {
-        _showError('Errore imprevisto durante l\'apertura.');
+        _showError(l10n.errorUnexpectedOpening);
         debugPrint('Unexpected parse error: $e');
         return;
       } finally {
@@ -179,13 +181,12 @@ class _HomeScreenState extends State<HomeScreen> {
   /// messaggio informativo.
   Future<void> _openRecent(RecentFile entry) async {
     if (_isOpening) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isOpening = true);
     try {
       final bytes = await _recentFiles.readCached(entry);
       if (bytes == null) {
-        _showError(
-          'Cache non più disponibile per "${entry.name}". Aprilo manualmente.',
-        );
+        _showError(l10n.errorCacheUnavailable(entry.name));
         await _openDocument();
         return;
       }
@@ -196,11 +197,11 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         delta = await compute(OdfParser.parse, bytes);
       } on OdfException catch (e) {
-        _showError(e.userMessage);
+        _showError(_odfErrorMessage(l10n, e));
         debugPrint('Recent open failed: $e');
         return;
       } catch (e) {
-        _showError('Errore imprevisto durante l\'apertura.');
+        _showError(l10n.errorUnexpectedOpening);
         debugPrint('Unexpected recent open error: $e');
         return;
       } finally {
@@ -248,9 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _newDocument() async {
     final controller = QuillController.basic();
+    final fileName = '${AppLocalizations.of(context)!.newDocument}.odt';
     await Navigator.of(context).push(
       _slideRoute(
-        EditorScreen(controller: controller, fileName: 'Nuovo documento.odt'),
+        EditorScreen(controller: controller, fileName: fileName),
       ),
     );
     await _reloadFromDisk();
@@ -279,6 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasContent = _recents.isNotEmpty || _draft != null;
     return Scaffold(
       body: Stack(
@@ -307,7 +310,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          if (_isParsing) const LoadingOverlay(message: 'Apertura documento…'),
+          if (_isParsing)
+            LoadingOverlay(message: l10n.loadingOpeningDocument),
         ],
       ),
       floatingActionButton: _isParsing
@@ -315,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : FloatingActionButton(
               heroTag: null,
               onPressed: _newDocument,
-              tooltip: 'Nuovo documento',
+              tooltip: l10n.newDocument,
               child: const Icon(Icons.add),
             ),
     );
@@ -327,3 +331,21 @@ Delta _runConverter((DocumentConverter, Uint8List) args) {
   final (converter, bytes) = args;
   return converter.fromBytes(bytes);
 }
+
+/// Maps an [OdfException] to a localized, user-facing message.
+String _odfErrorMessage(AppLocalizations l10n, OdfException e) => switch (e) {
+  OdfInvalidArchiveException() => l10n.odfErrorInvalidArchive,
+  OdfMissingContentException() => l10n.odfErrorMissingContent,
+  OdfMalformedXmlException() => l10n.odfErrorMalformedXml,
+  OdfUnknownException() => l10n.odfErrorUnknown,
+};
+
+/// Maps a [ConversionException] to a localized, user-facing message.
+String _conversionErrorMessage(AppLocalizations l10n, ConversionException e) =>
+    switch (e.kind) {
+      ConversionErrorKind.notValidUtf8 => l10n.conversionErrorNotValidUtf8,
+      ConversionErrorKind.markdownConversionFailed =>
+        l10n.conversionErrorMarkdownFailed,
+      ConversionErrorKind.odfFileNotPlainText =>
+        l10n.conversionErrorOdfNotPlainText,
+    };
