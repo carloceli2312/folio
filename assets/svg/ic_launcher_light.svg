@@ -1,8 +1,0 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="1024" height="1024" rx="0" fill="#F5F0E8"/>
-  <!-- F letter -->
-  <text x="440" y="620" text-anchor="middle" font-family="Georgia, serif" font-size="460" font-weight="bold" fill="#2C2C2C">F</text>
-  <!-- Cursor (static) -->
-  <rect x="620" y="310" width="22" height="245" rx="11" fill="#C4B8A6"/>
-</svg>
